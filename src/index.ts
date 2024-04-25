@@ -44,7 +44,9 @@ async function main() {
     if (userData.xp >= 1000) {
       if (userData.unVerifiedBlockchainAddresses.arweave) {
         const arweaveWallet = userData.unVerifiedBlockchainAddresses.arweave;
-        console.log(`User: ${arweaveWallet} with ${userData.xp} XP.`);
+        console.log(
+          `UserId: ${userData.id} Arweave Wallet: ${arweaveWallet} XP: ${userData.xp}`
+        );
         // check if user has already received airdrop
         if (faucetRecipients[arweaveWallet]) {
           console.log("Airdrop already sent");
