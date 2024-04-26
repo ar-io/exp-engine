@@ -9,13 +9,13 @@ import {
 import { ArIO, ArweaveSigner, DENOMINATIONS } from "@ar.io/sdk";
 import path from "path";
 
-const cacheUrl = "https://api.arns.app/v1/contract";
-const contractId = "bLAgYxAdX2Ry-nt6aH2ixgvJXbpsEYm28NgJgyqfs-U";
+export const cacheUrl = "https://api.arns.app/v1/contract";
+export const contractId = "bLAgYxAdX2Ry-nt6aH2ixgvJXbpsEYm28NgJgyqfs-U";
 
 export async function transferTestTokens(
   target: string,
   qty: number,
-  dryRun: boolean
+  dryRun?: boolean
 ): Promise<string> {
   // Get the key file used for the distribution
   const wallet: JWKInterface = loadWallet();
@@ -78,6 +78,18 @@ export async function enrichRecords(cacheUrl: string, records: CachedRecords) {
   return enrichedRecords;
 }
 
+export async function verifyNameOwnership(owner: string, enrichedRecords: any) {
+  for (const record in enrichedRecords) {
+    if (
+      enrichedRecords[record].contract.owner === owner &&
+      enrichedRecords[record].startTimestamp >= "1714156995"
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function fetchAndSaveCache() {
   try {
     const data: CacheResponse = await fetchCache(`${cacheUrl}/${contractId}`);
@@ -111,6 +123,7 @@ export async function calculateOnChainExpRewards(lastTickedHeight?: number) {
     cache = await fetchAndSaveCache();
   }
 
+  let scores = {};
   if (cache) {
     console.log("Analyzing ArNS data and calculating EXP");
     const scores = calculateArNSExp(cache.state.records);
@@ -118,5 +131,5 @@ export async function calculateOnChainExpRewards(lastTickedHeight?: number) {
     saveJsonToFile(scores, fileName);
     console.log(`Saved to disk at ${fileName}`);
   }
-  return cache;
+  return { scores, cache };
 }

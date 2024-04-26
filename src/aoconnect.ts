@@ -1,7 +1,7 @@
 import { JWKInterface } from "./types";
 import { loadWallet } from "./utilities";
 
-const expProcessId = "gAC5hpUPh1v-oPJLnK3Km6-atrYlvI271bI-q0yZOnw";
+const expProcessId = "aYrCboXVSl1AXL9gPFe3tfRxRf0ZmkOXH65mKT0HHZw";
 const { connect, createDataItemSigner } = require("@permaweb/aoconnect");
 const wallet: JWKInterface = loadWallet();
 

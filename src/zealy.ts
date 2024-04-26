@@ -1,6 +1,13 @@
 import { transferEXP } from "./aoconnect";
 import { devKey } from "./apikeys";
-import { transferTestTokens } from "./ar-io";
+import {
+  cacheUrl,
+  contractId,
+  enrichRecords,
+  fetchCache,
+  transferTestTokens,
+  verifyNameOwnership,
+} from "./ar-io";
 import { loadJsonFile, saveJsonToFile } from "./utilities";
 import path from "path";
 
@@ -32,7 +39,7 @@ export async function getUserInfo(zealyUserId: string) {
   return await response.json();
 }
 
-export async function runZealyFaucet(dryRun: boolean) {
+export async function runZealyFaucet(dryRun?: boolean) {
   const zealyUsers: any = await getLeaderboard();
 
   let faucetRecipients: { [key: string]: string } = {};
@@ -87,7 +94,11 @@ export async function runZealyFaucet(dryRun: boolean) {
   return newFaucetRecipients;
 }
 
-export async function runZealyAirdrop(sprintId: string, dryRun: boolean) {
+export async function runZealyAirdrop(
+  sprintId: string,
+  dryRun?: boolean,
+  enrichedCache?: any
+) {
   const zealyUsers: any = await getLeaderboard();
 
   let airdropRecipients: {
@@ -124,6 +135,14 @@ export async function runZealyAirdrop(sprintId: string, dryRun: boolean) {
     return {};
   }
 
+  if (!enrichedCache) {
+    enrichedCache = await fetchCache(`${cacheUrl}/${contractId}`);
+    enrichedCache.state.records = await enrichRecords(
+      cacheUrl,
+      enrichedCache.state.records
+    );
+  }
+
   for (let i = 0; i < zealyUsers.length; i += 1) {
     const zealyUser: any = zealyUsers[i];
     if (zealyUser.unVerifiedBlockchainAddresses.arweave) {
@@ -143,14 +162,26 @@ export async function runZealyAirdrop(sprintId: string, dryRun: boolean) {
           airdropRecipients[arweaveAddress] = {};
         }
 
+        let expToReward = 0;
+
         // Verify on chain actions TO DO
+        const validName = await verifyNameOwnership(
+          arweaveAddress,
+          enrichedCache.state.records
+        );
+        if (validName) {
+          console.log("Name ownership verified");
+          expToReward += 100; // 100 EXP for creating their name
+        } else {
+          console.log("Invalid Name ownership.");
+        }
 
         console.log("Airdropping EXP");
         const currentTotalXpRewarded = calculateTotalXpRewarded(
           airdropRecipients[arweaveAddress]
         );
         const xpToReward = zealyUser.xp - currentTotalXpRewarded;
-        const expToReward = xpToReward / 10;
+        expToReward = xpToReward * 1000000; // convert to denomination of 6
         const result = await transferEXP(arweaveAddress, expToReward, dryRun);
         airdropRecipients[arweaveAddress][sprintId] = {
           transferTxId: result,
