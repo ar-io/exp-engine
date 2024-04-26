@@ -14,7 +14,8 @@ const contractId = "bLAgYxAdX2Ry-nt6aH2ixgvJXbpsEYm28NgJgyqfs-U";
 
 export async function transferTestTokens(
   target: string,
-  qty: number
+  qty: number,
+  dryRun: boolean
 ): Promise<string> {
   // Get the key file used for the distribution
   const wallet: JWKInterface = loadWallet();
@@ -26,14 +27,18 @@ export async function transferTestTokens(
     contractTxId: contractId,
   });
 
-  const transfer = await arIOWriteable.transfer({
-    target,
-    qty,
-    denomination: DENOMINATIONS.IO,
-  });
-
-  console.log(`Airdropped ${qty} tIO to ${target} with txId ${transfer.id}`);
-  return transfer.id;
+  if (!dryRun) {
+    const transfer = await arIOWriteable.transfer({
+      target,
+      qty,
+      denomination: DENOMINATIONS.IO,
+    });
+    console.log(`Transferred ${qty} tIO to ${target} with txId ${transfer.id}`);
+    return transfer.id;
+  } else {
+    console.log(`Transferred ${qty} tIO to ${target} as dry run`);
+    return "dry run";
+  }
 }
 
 interface CacheResponse {

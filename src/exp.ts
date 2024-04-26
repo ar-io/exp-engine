@@ -145,7 +145,3 @@ export function calculateArNSExp(records: CachedRecords): Scores {
 
   return scores;
 }
-
-export function airdropExpToZealy(leaderboard: any) {
-  return leaderboard;
-}
