@@ -1,13 +1,20 @@
+import { calculateArNSExp } from "./exp";
 import { CachedRecords, JWKInterface } from "./types";
-import { loadWallet, retryFetch, saveJsonToFile } from "./utilities";
+import {
+  loadJsonFile,
+  loadWallet,
+  retryFetch,
+  saveJsonToFile,
+} from "./utilities";
 import { ArIO, ArweaveSigner, DENOMINATIONS } from "@ar.io/sdk";
+import path from "path";
 
 const cacheUrl = "https://api.arns.app/v1/contract";
 const contractId = "bLAgYxAdX2Ry-nt6aH2ixgvJXbpsEYm28NgJgyqfs-U";
-const faucetAmount = 1000;
 
-export async function airdropTestTokens(
-  arweaveWallet: string
+export async function transferTestTokens(
+  target: string,
+  qty: number
 ): Promise<string> {
   // Get the key file used for the distribution
   const wallet: JWKInterface = loadWallet();
@@ -20,14 +27,12 @@ export async function airdropTestTokens(
   });
 
   const transfer = await arIOWriteable.transfer({
-    target: arweaveWallet,
-    qty: faucetAmount,
+    target,
+    qty,
     denomination: DENOMINATIONS.IO,
   });
 
-  console.log(
-    `Airdropped ${faucetAmount} tIO to ${arweaveWallet} with txId ${transfer.id}`
-  );
+  console.log(`Airdropped ${qty} tIO to ${target} with txId ${transfer.id}`);
   return transfer.id;
 }
 
@@ -74,7 +79,7 @@ export async function fetchAndSaveCache() {
     const enrichedRecords = await enrichRecords(cacheUrl, data.state.records);
     data.state.records = enrichedRecords;
 
-    const fileName = "ar-io-" + data.state.lastTickedHeight + ".json";
+    const fileName = "ar-io-state-" + data.state.lastTickedHeight + ".json";
     saveJsonToFile(data, fileName);
     console.log(
       `AR.IO Contract state data has been fetched and saved as ${fileName}, with skipped records where data could not be enriched.`
@@ -84,4 +89,29 @@ export async function fetchAndSaveCache() {
     console.log(err);
     return false;
   }
+}
+
+export async function calculateOnChainExpRewards(lastTickedHeight?: number) {
+  let cache: any = {};
+  if (lastTickedHeight) {
+    const cacheFilePath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `ar-io-state-${lastTickedHeight}.json`
+    );
+    cache = await loadJsonFile(cacheFilePath);
+  } else {
+    console.log("Fetching and saving the latest ar.io cache");
+    cache = await fetchAndSaveCache();
+  }
+
+  if (cache) {
+    console.log("Analyzing ArNS data and calculating EXP");
+    const scores = calculateArNSExp(cache.state.records);
+    const fileName = "exp-arns-" + cache.state.lastTickedHeight + ".json";
+    saveJsonToFile(scores, fileName);
+    console.log(`Saved to disk at ${fileName}`);
+  }
+  return cache;
 }
