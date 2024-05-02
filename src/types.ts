@@ -61,6 +61,17 @@ export type FaucetRecipient = {
   timestamp: number;
 };
 
+export interface HistoricalScoreDetail {
+  totalPoints: number;
+  totalNames: number;
+  names: string[];
+  categories: Categories;
+}
+
+export interface HistoricalScores {
+  [owner: string]: HistoricalScoreDetail;
+}
+
 export type WalletAddress = string;
 export type TransactionId = string;
 export type DemandFactoringData = {

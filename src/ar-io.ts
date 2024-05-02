@@ -1,4 +1,9 @@
-import { DEFAULT_ARNS_DATA_POINTER, ZEALY_START_TIMESTAMP } from "./constants";
+import {
+  CACHE_URL,
+  CONTRACT_ID,
+  DEFAULT_ARNS_DATA_POINTER,
+  ZEALY_START_TIMESTAMP,
+} from "./constants";
 import { calculateHistoricalExp } from "./exp";
 import { CachedRecords, JWKInterface } from "./types";
 import {
@@ -12,9 +17,6 @@ import {
 import { ArIO, ArweaveSigner, DENOMINATIONS } from "@ar.io/sdk";
 import path from "path";
 
-export const cacheUrl = "https://api.arns.app/v1/contract";
-export const contractId = "bLAgYxAdX2Ry-nt6aH2ixgvJXbpsEYm28NgJgyqfs-U";
-
 export async function transferTestTokens(
   target: string,
   qty: number,
@@ -27,7 +29,7 @@ export async function transferTestTokens(
   // read and write client that has access to all APIs
   const arIOWriteable = ArIO.init({
     signer: nodeSigner,
-    contractTxId: contractId,
+    contractTxId: CONTRACT_ID,
   });
 
   if (!dryRun) {
@@ -162,8 +164,8 @@ export async function verifyNameQuests(owner: string, enrichedRecords: any) {
 
 export async function fetchAndSaveCache() {
   try {
-    const data: CacheResponse = await fetchCache(`${cacheUrl}/${contractId}`);
-    const enrichedRecords = await enrichRecords(cacheUrl, data.state.records);
+    const data: CacheResponse = await fetchCache(`${CACHE_URL}/${CONTRACT_ID}`);
+    const enrichedRecords = await enrichRecords(CACHE_URL, data.state.records);
     data.state.records = enrichedRecords;
 
     const fileName = "ar-io-state-" + data.state.lastTickedHeight + ".json";
@@ -181,7 +183,7 @@ export async function fetchAndSaveCache() {
 export async function fetchAndSaveState(blockHeight: number) {
   try {
     const state = await getState(blockHeight);
-    const enrichedRecords = await enrichRecords(cacheUrl, state.records);
+    const enrichedRecords = await enrichRecords(CACHE_URL, state.records);
     state.records = enrichedRecords;
 
     const fileName = "ar-io-state-" + blockHeight + ".json";

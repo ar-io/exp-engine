@@ -9,19 +9,8 @@ import {
   HISTORICAL_ROOT_DATA_POINTER_SET_REWARD,
   HISTORICAL_UNDERNAME_DATA_POINTER_SET_REWARD,
 } from "./constants";
-import { CachedRecords, Categories, Gateways } from "./types";
+import { CachedRecords, Gateways, HistoricalScores } from "./types";
 import { isArweaveAddress } from "./utilities";
-
-interface HistoricalScoreDetail {
-  totalPoints: number;
-  totalNames: number;
-  names: string[];
-  categories: Categories;
-}
-
-interface HistoricalScores {
-  [owner: string]: HistoricalScoreDetail;
-}
 
 // Function to calculate scores based on the rules provided
 export function calculateArNSExpFlat(records: CachedRecords) {

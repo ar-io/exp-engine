@@ -1,7 +1,6 @@
 import { mintEXP } from "./aoconnect";
 import { devKey } from "./apikeys";
 import {
-  cacheUrl,
   enrichRecords,
   fetchAndSaveState,
   transferTestTokens,
@@ -10,8 +9,12 @@ import {
 import {
   BASIC_NAME_REWARD,
   BASIC_UNDERNAME_REWARD,
+  CACHE_URL,
+  FAUCET_QUANTITY,
+  MIN_FAUCET_XP,
   ROOT_DATA_POINTER_SET_REWARD,
   UNDERNAME_DATA_POINTER_SET_REWARD,
+  ZEALY_URL,
 } from "./constants";
 import { AirdropList, FaucetRecipient } from "./types";
 import {
@@ -21,14 +24,9 @@ import {
 } from "./utilities";
 import path from "path";
 
-const zealy = "https://api-v2.zealy.io/public/communities/";
-const zealyFaucetAmount = 1000;
-
-// const zealyProd = zealy + 'ar-io'
-// const zealyTest = zealy + 'theawesomecommunity'
-const zealyDev = zealy + "theblackfox";
+const zealyUrl = ZEALY_URL;
 export async function getLeaderboard() {
-  const response = await fetch(`${zealyDev}/leaderboard`, {
+  const response = await fetch(`${zealyUrl}/leaderboard`, {
     method: "GET",
     headers: { "x-api-key": devKey },
   });
@@ -42,7 +40,7 @@ export async function getLeaderboard() {
 }
 
 export async function getUserInfo(zealyUserId: string) {
-  const response = await fetch(`${zealyDev}/users/${zealyUserId}`, {
+  const response = await fetch(`${zealyUrl}/users/${zealyUserId}`, {
     method: "GET",
     headers: { "x-api-key": devKey },
   });
@@ -72,7 +70,7 @@ export async function runZealyFaucet(dryRun?: boolean) {
 
   for (let i = 0; i < zealyUsers.length; i += 1) {
     const zealyUser: any = zealyUsers[i];
-    if (zealyUser.xp >= 1000) {
+    if (zealyUser.xp >= MIN_FAUCET_XP) {
       if (zealyUser.unVerifiedBlockchainAddresses.arweave) {
         const arweaveAddress = zealyUser.unVerifiedBlockchainAddresses.arweave;
         console.log(
@@ -85,7 +83,7 @@ export async function runZealyFaucet(dryRun?: boolean) {
           console.log("- Sending Faucet reward");
           const transferTxId = await transferTestTokens(
             arweaveAddress,
-            zealyFaucetAmount,
+            FAUCET_QUANTITY,
             dryRun
           );
           faucetRecipients[arweaveAddress] = {
@@ -139,7 +137,7 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
   if (!enrichedCache) {
     const blockHeight = await getCurrentBlockHeight();
     const state = await fetchAndSaveState(blockHeight);
-    enrichedCache.records = await enrichRecords(cacheUrl, state.records);
+    enrichedCache.records = await enrichRecords(CACHE_URL, state.records);
   }
 
   for (let i = 0; i < zealyUsers.length; i += 1) {
@@ -282,12 +280,4 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
   // Save any last changes to the .json file
   saveJsonToFile(airdropList, "airdrop-list.json");
   return airdropList;
-}
-
-export function calculateTotalXpRewarded(airdropRecipient: any) {
-  let totalXpRewarded = 0;
-  for (const sprint in airdropRecipient) {
-    totalXpRewarded += airdropRecipient[sprint].xpEarned;
-  }
-  return totalXpRewarded;
 }

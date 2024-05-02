@@ -1,12 +1,10 @@
 // Import axios
-import { keyfile } from "./constants";
+import { GATEWAY_URL, keyfile } from "./constants";
 import { JWKInterface } from "./types";
 import axios, { AxiosResponse } from "axios";
 import axiosRetry, { exponentialDelay } from "axios-retry";
 import fs from "fs";
 import * as path from "path";
-
-const gatewayUrl = "https://arweave.net/";
 
 export const loadWallet = (): JWKInterface => {
   if (process.env.JWK) {
@@ -42,7 +40,7 @@ export async function retryFetch(reqURL: string): Promise<AxiosResponse<any>> {
 export async function getCurrentBlockHeight() {
   let height = 0;
   try {
-    const response = await retryFetch(gatewayUrl + "height");
+    const response = await retryFetch(GATEWAY_URL + "height");
     height = await response.data;
     return height;
   } catch (err) {}
