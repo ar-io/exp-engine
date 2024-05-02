@@ -1,14 +1,24 @@
-import { transferEXP } from "./aoconnect";
+import { mintEXP } from "./aoconnect";
 import { devKey } from "./apikeys";
 import {
   cacheUrl,
-  contractId,
   enrichRecords,
-  fetchCache,
+  fetchAndSaveState,
   transferTestTokens,
-  verifyNameOwnership,
+  verifyNameQuests,
 } from "./ar-io";
-import { loadJsonFile, saveJsonToFile } from "./utilities";
+import {
+  BASIC_NAME_REWARD,
+  BASIC_UNDERNAME_REWARD,
+  ROOT_DATA_POINTER_SET_REWARD,
+  UNDERNAME_DATA_POINTER_SET_REWARD,
+} from "./constants";
+import { AirdropList, FaucetRecipient } from "./types";
+import {
+  getCurrentBlockHeight,
+  loadJsonFile,
+  saveJsonToFile,
+} from "./utilities";
 import path from "path";
 
 const zealy = "https://api-v2.zealy.io/public/communities/";
@@ -40,10 +50,11 @@ export async function getUserInfo(zealyUserId: string) {
 }
 
 export async function runZealyFaucet(dryRun?: boolean) {
+  console.log("Running Zealy tIO Faucet");
   const zealyUsers: any = await getLeaderboard();
 
-  let faucetRecipients: { [key: string]: string } = {};
-  let newFaucetRecipients: { [key: string]: string } = {};
+  let faucetRecipients: { [key: string]: FaucetRecipient } = {};
+  let newFaucetRecipients: { [key: string]: FaucetRecipient } = {};
   try {
     const faucetRecipientsFilePath = path.join(
       __dirname,
@@ -69,16 +80,20 @@ export async function runZealyFaucet(dryRun?: boolean) {
         );
         // check if user has already received airdrop
         if (faucetRecipients[arweaveAddress]) {
-          console.log("Faucet reward already sent");
+          console.log("- Faucet reward already sent");
         } else {
-          console.log("Sending Faucet reward");
+          console.log("- Sending Faucet reward");
           const transferTxId = await transferTestTokens(
             arweaveAddress,
             zealyFaucetAmount,
             dryRun
           );
-          faucetRecipients[arweaveAddress] = transferTxId;
-          newFaucetRecipients[arweaveAddress] = transferTxId;
+          faucetRecipients[arweaveAddress] = {
+            transferTxId,
+            timestamp: Math.floor(Date.now() / 1000),
+          };
+          newFaucetRecipients[arweaveAddress] =
+            faucetRecipients[arweaveAddress];
           saveJsonToFile(faucetRecipients, "faucet-recipients.json");
         }
       } else {
@@ -94,53 +109,37 @@ export async function runZealyFaucet(dryRun?: boolean) {
   return newFaucetRecipients;
 }
 
-export async function runZealyAirdrop(
-  sprintId: string,
-  dryRun?: boolean,
-  enrichedCache?: any
-) {
+export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
   const zealyUsers: any = await getLeaderboard();
 
-  let airdropRecipients: {
-    [key: string]: {
-      [sprint: string]: {
-        xpEarned: number;
-        expRewarded: number;
-        transferTxId: string;
-      };
-    };
-  } = {};
-  let newAirdropRecipients: {
-    [key: string]: {
-      [sprint: string]: {
-        xpEarned: number;
-        expRewarded: number;
-        transferTxId: string;
-      };
-    };
-  } = {};
-
+  let airdropList: AirdropList;
   try {
     const airdropRecipientsFilePath = path.join(
       __dirname,
       "..",
       "data",
-      "airdrop-recipients.json"
+      "airdrop-list.json"
     );
-    airdropRecipients = await loadJsonFile(airdropRecipientsFilePath);
+    airdropList = await loadJsonFile(airdropRecipientsFilePath);
   } catch {
     console.log(
-      "Airdrop Recipients data is missing.  Ensure airdrop-recipients.json exists"
+      "Airdrop Recipients data is missing.  Ensure airdrop-list.json exists"
     );
     return {};
   }
 
+  let sprintId = 1;
+  if (airdropList.lastSprint >= 0) {
+    sprintId = airdropList.lastSprint + 1;
+    airdropList.lastSprint = sprintId;
+  }
+
+  airdropList.lastAirdropTimeStamp = Math.floor(Date.now() / 1000);
+
   if (!enrichedCache) {
-    enrichedCache = await fetchCache(`${cacheUrl}/${contractId}`);
-    enrichedCache.state.records = await enrichRecords(
-      cacheUrl,
-      enrichedCache.state.records
-    );
+    const blockHeight = await getCurrentBlockHeight();
+    const state = await fetchAndSaveState(blockHeight);
+    enrichedCache.records = await enrichRecords(cacheUrl, state.records);
   }
 
   for (let i = 0; i < zealyUsers.length; i += 1) {
@@ -151,46 +150,128 @@ export async function runZealyAirdrop(
         `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
       );
 
+      // Add a new Wallet user if not created in airdrop list already.
+      if (!airdropList.recipients[arweaveAddress]) {
+        airdropList.recipients[arweaveAddress] = {
+          zealyId: zealyUser.id,
+          xpEarned: 0,
+          expRewarded: 0,
+          categories: {},
+          sprintsParticipated: {},
+        };
+      }
+
       // check if user has already received airdrop for this sprint
       if (
-        airdropRecipients[arweaveAddress] &&
-        airdropRecipients[arweaveAddress][sprintId]
+        airdropList.recipients[arweaveAddress] &&
+        airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId]
       ) {
         console.log("EXP Airdrop already sent for this sprint");
+      } else if (
+        airdropList.recipients[arweaveAddress] &&
+        airdropList.recipients[arweaveAddress].zealyId !== zealyUser.id
+      ) {
+        console.log("This Zealy user is not the initiator of this wallet");
       } else {
-        if (!airdropRecipients[arweaveAddress]) {
-          airdropRecipients[arweaveAddress] = {};
-        }
+        // This must be a new sprint
 
+        console.log(
+          "- This Zealy user has not participated in this sprint yet"
+        );
+        // Verify and reward on chain actions
         let expToReward = 0;
-
-        // Verify on chain actions TO DO
-        const validName = await verifyNameOwnership(
+        const nameQuestsCompleted = await verifyNameQuests(
           arweaveAddress,
-          enrichedCache.state.records
+          enrichedCache.records
         );
-        if (validName) {
-          console.log("Name ownership verified");
-          expToReward += 100; // 100 EXP for creating their name
-        } else {
-          console.log("Invalid Name ownership.");
+        console.log("quests completed: ");
+        console.log(nameQuestsCompleted);
+
+        // Check if a name was created
+        if (
+          nameQuestsCompleted.basicName &&
+          !airdropList.recipients[arweaveAddress].categories.basicName
+        ) {
+          airdropList.recipients[arweaveAddress].categories.basicName = {
+            name: nameQuestsCompleted.basicName,
+            exp: BASIC_NAME_REWARD,
+            awardedOnSprint: sprintId,
+          };
+          expToReward += BASIC_NAME_REWARD;
         }
 
-        console.log("Airdropping EXP");
-        const currentTotalXpRewarded = calculateTotalXpRewarded(
-          airdropRecipients[arweaveAddress]
-        );
-        const xpToReward = zealyUser.xp - currentTotalXpRewarded;
-        expToReward = xpToReward * 1000000; // convert to denomination of 6
-        const result = await transferEXP(arweaveAddress, expToReward, dryRun);
-        airdropRecipients[arweaveAddress][sprintId] = {
-          transferTxId: result,
-          xpEarned: zealyUser.xp,
-          expRewarded: expToReward,
-        };
-        newAirdropRecipients[arweaveAddress] =
-          airdropRecipients[arweaveAddress];
-        saveJsonToFile(airdropRecipients, "airdrop-recipients.json");
+        // Check for an undername being created
+        if (
+          nameQuestsCompleted.basicUndername &&
+          !airdropList.recipients[arweaveAddress].categories.basicUndername
+        ) {
+          airdropList.recipients[arweaveAddress].categories.basicUndername = {
+            name: nameQuestsCompleted.basicUndername,
+            exp: BASIC_UNDERNAME_REWARD,
+            awardedOnSprint: sprintId,
+          };
+          expToReward += BASIC_UNDERNAME_REWARD;
+        }
+
+        // Check for root data pointer being set
+        if (
+          nameQuestsCompleted.rootDataPointerSet &&
+          !airdropList.recipients[arweaveAddress].categories.rootDataPointerSet
+        ) {
+          airdropList.recipients[arweaveAddress].categories.rootDataPointerSet =
+            {
+              name: nameQuestsCompleted.rootDataPointerSet,
+              exp: ROOT_DATA_POINTER_SET_REWARD,
+              awardedOnSprint: sprintId,
+            };
+          expToReward += ROOT_DATA_POINTER_SET_REWARD;
+        }
+
+        // Check for undername data pointer being set
+        if (
+          nameQuestsCompleted.undernameDataPointerSet &&
+          !airdropList.recipients[arweaveAddress].categories
+            .undernameDataPointerSet
+        ) {
+          // Undername data pointer set
+          airdropList.recipients[
+            arweaveAddress
+          ].categories.undernameDataPointerSet = {
+            name: nameQuestsCompleted.undernameDataPointerSet,
+            exp: UNDERNAME_DATA_POINTER_SET_REWARD,
+            awardedOnSprint: sprintId,
+          };
+          expToReward += UNDERNAME_DATA_POINTER_SET_REWARD;
+        }
+
+        // Convert new Zealy XP to EXP
+        const currentSprintXp =
+          zealyUser.xp - airdropList.recipients[arweaveAddress].xpEarned || 0;
+        expToReward += currentSprintXp; // 1 XP = 1 EXP
+        airdropList.recipients[arweaveAddress].expRewarded += expToReward;
+        airdropList.recipients[arweaveAddress].xpEarned = zealyUser.xp;
+
+        if (expToReward > 0) {
+          console.log("- Airdropping EXP");
+          const result = await mintEXP(arweaveAddress, expToReward, dryRun);
+          airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId] =
+            {
+              transferTxId: result,
+              xpEarned: currentSprintXp,
+              expRewarded: expToReward,
+              timestamp: Math.floor(Date.now() / 1000),
+            };
+        } else {
+          console.log("- No EXP to airdrop!");
+          airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId] =
+            {
+              transferTxId: "",
+              xpEarned: currentSprintXp,
+              expRewarded: 0,
+              timestamp: Math.floor(Date.now() / 1000),
+            };
+        }
+        saveJsonToFile(airdropList, "airdrop-list.json");
       }
     } else {
       console.log(
@@ -198,7 +279,9 @@ export async function runZealyAirdrop(
       );
     }
   }
-  return newAirdropRecipients;
+  // Save any last changes to the .json file
+  saveJsonToFile(airdropList, "airdrop-list.json");
+  return airdropList;
 }
 
 export function calculateTotalXpRewarded(airdropRecipient: any) {

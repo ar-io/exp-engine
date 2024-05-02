@@ -6,17 +6,55 @@ export type CachedRecord = {
   type: string;
   undernames: number;
   contract: {
-      balances: { [key: string]: number };
-      controllers: string[];
-      evolve: any;
-      name: string;
-      owner: string;
-      records: { [key: string]: { transactionId: string; ttlSeconds: number } };
-      ticker: string;
+    balances: { [key: string]: number };
+    controllers: string[];
+    evolve: any;
+    name: string;
+    owner: string;
+    records: { [key: string]: { transactionId: string; ttlSeconds: number } };
+    ticker: string;
   };
-}
+};
 export type CachedRecords = Record<string, CachedRecord>;
 
+export type AirdropList = {
+  lastAirdropTimeStamp: number; // the last timestamp in MS for the last airdrop
+  lastSprint: number; // the number of the sprint, operating weekly
+  recipients: Record<string, AirdropRecipient>;
+};
+
+export type AirdropRecipient = {
+  zealyId: string;
+  xpEarned: number;
+  expRewarded: number;
+  categories: {
+    basicName?: CategoryDetails;
+    basicUndername?: CategoryDetails;
+    rootDataPointerSet?: CategoryDetails;
+    undernameDataPointerSet?: CategoryDetails;
+    moreThanTenUndernames?: CategoryDetails;
+    controllersAdded?: CategoryDetails;
+  };
+  sprintsParticipated: Record<number, SprintDetails>;
+};
+
+export type CategoryDetails = {
+  name: string;
+  exp: number;
+  awardedOnSprint: number;
+};
+
+export type SprintDetails = {
+  transferTxId: string;
+  xpEarned: number;
+  expRewarded: number;
+  timestamp: number;
+};
+
+export type FaucetRecipient = {
+  transferTxId: string;
+  timestamp: number;
+};
 
 export type WalletAddress = string;
 export type TransactionId = string;
@@ -65,7 +103,7 @@ export interface PstState extends EvolveState {
   ticker: string;
   owner: string;
   balances: {
-      [key: string]: number;
+    [key: string]: number;
   };
 }
 
@@ -138,12 +176,12 @@ export type ArNSBaseAuctionData = {
 };
 
 export type ArNSLeaseAuctionData = ArNSBaseAuctionData & {
-  type: 'lease';
+  type: "lease";
   years: 1;
 };
 
 export type ArNSPermabuyAuctionData = ArNSBaseAuctionData & {
-  type: 'permabuy';
+  type: "permabuy";
 };
 
 export type ArNSAuctionData = ArNSLeaseAuctionData | ArNSPermabuyAuctionData;
@@ -174,7 +212,7 @@ export type DelegateData = {
   vaults: Vaults; // the locked tokens staked by this gateway operator
 };
 
-const gatewayStatus = ['joined', 'leaving'] as const;
+const gatewayStatus = ["joined", "leaving"] as const;
 export type GatewayStatus = (typeof gatewayStatus)[number];
 
 export type Gateway = {
@@ -204,7 +242,7 @@ export type GatewaySettings = {
   note?: string; // An additional note (256 character max) the gateway operator can set to indicate things like maintenance or other operational updates.
 };
 
-export type DemandFactoringCriteria = 'purchases' | 'revenue';
+export type DemandFactoringCriteria = "purchases" | "revenue";
 export type DemandFactoringSettings = {
   movingAvgPeriodCount: number;
   periodBlockCount: number;
@@ -216,8 +254,8 @@ export type DemandFactoringSettings = {
   criteria: DemandFactoringCriteria;
 };
 
-export type AllowedProtocols = 'http' | 'https';
-export type RegistrationType = 'lease' | 'permabuy';
+export type AllowedProtocols = "http" | "https";
+export type RegistrationType = "lease" | "permabuy";
 
 export type ArNSBaseNameData = {
   contractTxId: string; // The ANT Contract used to manage this name
@@ -228,11 +266,11 @@ export type ArNSBaseNameData = {
 };
 
 export type ArNSPermabuyData = ArNSBaseNameData & {
-  type: 'permabuy';
+  type: "permabuy";
 };
 
 export type ArNSLeaseData = ArNSBaseNameData & {
-  type: 'lease';
+  type: "lease";
   endTimestamp: number; // At what unix time (seconds since epoch) the lease ends
 };
 
@@ -281,12 +319,12 @@ export class PositiveFiniteInteger implements Equatable<PositiveFiniteInteger> {
       !Number.isInteger(this.positiveFiniteInteger) ||
       this.positiveFiniteInteger < 0
     ) {
-      return null
+      return null;
     }
   }
 
   [Symbol.toPrimitive](hint?: string): number | string {
-    if (hint === 'string') {
+    if (hint === "string") {
       this.toString();
     }
 
@@ -295,13 +333,13 @@ export class PositiveFiniteInteger implements Equatable<PositiveFiniteInteger> {
 
   plus(positiveFiniteInteger: PositiveFiniteInteger): PositiveFiniteInteger {
     return new PositiveFiniteInteger(
-      this.positiveFiniteInteger + positiveFiniteInteger.positiveFiniteInteger,
+      this.positiveFiniteInteger + positiveFiniteInteger.positiveFiniteInteger
     );
   }
 
   minus(positiveFiniteInteger: PositiveFiniteInteger): PositiveFiniteInteger {
     return new PositiveFiniteInteger(
-      this.positiveFiniteInteger - positiveFiniteInteger.positiveFiniteInteger,
+      this.positiveFiniteInteger - positiveFiniteInteger.positiveFiniteInteger
     );
   }
 
@@ -312,7 +350,7 @@ export class PositiveFiniteInteger implements Equatable<PositiveFiniteInteger> {
   }
 
   isGreaterThanOrEqualTo(
-    positiveFiniteInteger: PositiveFiniteInteger,
+    positiveFiniteInteger: PositiveFiniteInteger
   ): boolean {
     return (
       this.positiveFiniteInteger >= positiveFiniteInteger.positiveFiniteInteger
@@ -350,7 +388,7 @@ export class PositiveFiniteInteger implements Equatable<PositiveFiniteInteger> {
 
 export class BlockHeight extends PositiveFiniteInteger {
   // TODO: Improve upon this technique for sub-type discrimination
-  readonly type = 'BlockHeight';
+  readonly type = "BlockHeight";
   constructor(blockHeight: number) {
     super(blockHeight);
   }
@@ -368,7 +406,7 @@ export class BlockHeight extends PositiveFiniteInteger {
 
 export class BlockTimestamp extends PositiveFiniteInteger {
   // TODO: Improve upon this technique for sub-type discrimination
-  readonly type = 'BlockTimestamp';
+  readonly type = "BlockTimestamp";
   constructor(blockTimestamp: number) {
     super(blockTimestamp);
   }
@@ -457,7 +495,7 @@ export class mIOToken extends PositiveFiniteInteger {
   divide(divisor: mIOToken | number): mIOToken {
     if (divisor.valueOf() === 0) {
       // TODO: how should we handle this
-      return null
+      return null;
     }
     // always round down on multiplication and division
     const result = Math.floor(this.valueOf() / divisor.valueOf());

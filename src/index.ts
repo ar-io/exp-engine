@@ -1,26 +1,19 @@
 import { calculateOnChainExpRewards } from "./ar-io";
-import { runZealyAirdrop, runZealyFaucet } from "./zealy";
+import { runAirdropCron, runFaucetCron } from "./cron";
+import { runZealyAirdrop } from "./zealy";
 
 async function main() {
   console.log("Calculating onchain rewards");
-  const { cache: enrichedCache, scores: onchainRewards } =
-    await calculateOnChainExpRewards(1411738); // including last ticked height here
-  console.log("Enriched Cache: ");
-  console.log(enrichedCache);
-  console.log("Onchain Scores: ");
-  console.log(onchainRewards);
-  console.log("Running Zealy tIO Faucet");
-  const newFaucetRecipients = await runZealyFaucet(true); // dry run set to true
-  console.log("New tIO Faucet Recipients: ");
-  console.log(newFaucetRecipients);
+  const { state: enrichedCache } = await calculateOnChainExpRewards(1415082); // including last ticked height here
+  //const newFaucetRecipients = await runZealyFaucet(false); // no dry run
+  //console.log("New tIO Faucet Recipients: ");
+  //console.log(newFaucetRecipients);
+  await runFaucetCron();
+  await runAirdropCron();
   console.log("Running Zealy EXP Airdrop");
-  const newAirdropRecipients = await runZealyAirdrop(
-    "sprint1",
-    false,
-    enrichedCache
-  ); // no dry run
-  console.log("New EXP Airdrop Recipients: ");
-  console.log(newAirdropRecipients);
+  const newAirdropList = await runZealyAirdrop(true, enrichedCache); // no dry run
+  console.log("New EXP Airdrop List: ");
+  console.log(newAirdropList);
 }
 
 main().catch(console.error);

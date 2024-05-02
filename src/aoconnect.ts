@@ -23,7 +23,33 @@ export async function transferEXP(
         { name: "Quantity", value: quantity.toString() },
       ],
     });
-    console.log(result);
+    return result;
+  }
+}
+
+export async function mintEXP(
+  airdropRecipient: string,
+  quantity: number,
+  dryRun?: boolean
+) {
+  if (dryRun) {
+    console.log(`Minted ${quantity} EXP to ${airdropRecipient} as dry run`);
+    return "dry run";
+  } else {
+    const { message } = await connect();
+    const result = await message({
+      process: expProcessId,
+      signer: createDataItemSigner(wallet),
+      tags: [
+        { name: "Action", value: "Mint" },
+        { name: "Recipient", value: airdropRecipient },
+        { name: "Quantity", value: quantity.toString() },
+      ],
+    });
+
+    console.log(
+      `Minted ${quantity} EXP to ${airdropRecipient} with txId ${result}`
+    );
     return result;
   }
 }

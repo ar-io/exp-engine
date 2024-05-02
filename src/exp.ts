@@ -1,3 +1,4 @@
+import { DEFAULT_ARNS_DATA_POINTER } from "./constants";
 import { CachedRecords } from "./types";
 
 interface ScoreDetail {
@@ -6,10 +7,10 @@ interface ScoreDetail {
   names: string[];
   categories: {
     basicRecord: { name: string; points: number; awarded: boolean };
-    transactionIdCheck: { name: string; points: number; awarded: boolean };
+    rootTransactionIdCheck: { name: string; points: number; awarded: boolean };
     multipleUndernames: { name: string; points: number; awarded: boolean };
     moreThanTenUndernames: { name: string; points: number; awarded: boolean };
-    controllersAddedded: { name: string; points: number; awarded: boolean };
+    controllersAdded: { name: string; points: number; awarded: boolean };
   };
 }
 
@@ -77,10 +78,10 @@ export function calculateArNSExp(records: CachedRecords): Scores {
         names: [],
         categories: {
           basicRecord: { name: "", points: 0, awarded: false },
-          transactionIdCheck: { name: "", points: 0, awarded: false },
+          rootTransactionIdCheck: { name: "", points: 0, awarded: false },
           multipleUndernames: { name: "", points: 0, awarded: false },
           moreThanTenUndernames: { name: "", points: 0, awarded: false },
-          controllersAddedded: { name: "", points: 0, awarded: false },
+          controllersAdded: { name: "", points: 0, awarded: false },
         },
       };
     }
@@ -100,13 +101,13 @@ export function calculateArNSExp(records: CachedRecords): Scores {
       record.contract.records["@"] &&
       record.contract.records["@"].transactionId !== "" &&
       record.contract.records["@"].transactionId !==
-        "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk" &&
-      scores[owner].categories.transactionIdCheck.awarded === false
+        DEFAULT_ARNS_DATA_POINTER &&
+      scores[owner].categories.rootTransactionIdCheck.awarded === false
     ) {
       scores[owner].totalPoints += 25;
-      scores[owner].categories.transactionIdCheck.name = key;
-      scores[owner].categories.transactionIdCheck.points += 25;
-      scores[owner].categories.transactionIdCheck.awarded = true;
+      scores[owner].categories.rootTransactionIdCheck.name = key;
+      scores[owner].categories.rootTransactionIdCheck.points += 25;
+      scores[owner].categories.rootTransactionIdCheck.awarded = true;
     }
 
     // Points for having multiple undernames
@@ -134,12 +135,12 @@ export function calculateArNSExp(records: CachedRecords): Scores {
     // Points for having a controller
     if (
       record.contract.controllers &&
-      scores[owner].categories.controllersAddedded.awarded === false
+      scores[owner].categories.controllersAdded.awarded === false
     ) {
       scores[owner].totalPoints += 10;
-      scores[owner].categories.controllersAddedded.name = key;
-      scores[owner].categories.controllersAddedded.points += 10;
-      scores[owner].categories.controllersAddedded.awarded = true;
+      scores[owner].categories.controllersAdded.name = key;
+      scores[owner].categories.controllersAdded.points += 10;
+      scores[owner].categories.controllersAdded.awarded = true;
     }
   }
 
