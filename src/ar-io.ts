@@ -1,5 +1,5 @@
 import { DEFAULT_ARNS_DATA_POINTER, ZEALY_START_TIMESTAMP } from "./constants";
-import { calculateArNSExp } from "./exp";
+import { calculateHistoricalExp } from "./exp";
 import { CachedRecords, JWKInterface } from "./types";
 import {
   getCurrentBlockHeight,
@@ -196,7 +196,7 @@ export async function fetchAndSaveState(blockHeight: number) {
   }
 }
 
-export async function calculateOnChainExpRewards(blockHeight?: number) {
+export async function calculateHistoricalExpRewards(blockHeight?: number) {
   let state: any = {};
   if (blockHeight) {
     const cacheFilePath = path.join(
@@ -223,9 +223,9 @@ export async function calculateOnChainExpRewards(blockHeight?: number) {
 
   let scores = {};
   if (state) {
-    console.log("Analyzing ArNS data and calculating EXP");
-    const scores = calculateArNSExp(state.records);
-    const fileName = "exp-arns-" + blockHeight + ".json";
+    console.log("Analyzing AR.IO State and calculating EXP Rewards");
+    const scores = calculateHistoricalExp(state.records, state.gateways);
+    const fileName = "historical-exp-rewards-" + blockHeight + ".json";
     saveJsonToFile(scores, fileName);
   }
   return { scores, state };

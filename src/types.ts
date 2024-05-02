@@ -15,6 +15,7 @@ export type CachedRecord = {
     ticker: string;
   };
 };
+
 export type CachedRecords = Record<string, CachedRecord>;
 
 export type AirdropList = {
@@ -27,15 +28,19 @@ export type AirdropRecipient = {
   zealyId: string;
   xpEarned: number;
   expRewarded: number;
-  categories: {
-    basicName?: CategoryDetails;
-    basicUndername?: CategoryDetails;
-    rootDataPointerSet?: CategoryDetails;
-    undernameDataPointerSet?: CategoryDetails;
-    moreThanTenUndernames?: CategoryDetails;
-    controllersAdded?: CategoryDetails;
-  };
+  categories: Categories;
   sprintsParticipated: Record<number, SprintDetails>;
+};
+
+export type Categories = {
+  basicName?: CategoryDetails;
+  ogName?: CategoryDetails;
+  basicUndername?: CategoryDetails;
+  rootDataPointerSet?: CategoryDetails;
+  undernameDataPointerSet?: CategoryDetails;
+  purchasedMoreUndernames?: CategoryDetails;
+  controllersAdded?: CategoryDetails;
+  joinedGateway?: CategoryDetails;
 };
 
 export type CategoryDetails = {
