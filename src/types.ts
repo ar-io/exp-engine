@@ -32,19 +32,36 @@ export type AirdropRecipient = {
   sprintsParticipated: Record<number, SprintDetails>;
 };
 
+export interface HistoricalScoreDetail {
+  totalPoints: number;
+  totalNames: number;
+  names: string[];
+  categories: Categories;
+}
+
+export interface HistoricalScores {
+  [owner: string]: HistoricalScoreDetail;
+}
+
 export type Categories = {
   basicName?: CategoryDetails;
   ogName?: CategoryDetails;
   basicUndername?: CategoryDetails;
   rootDataPointerSet?: CategoryDetails;
   undernameDataPointerSet?: CategoryDetails;
-  purchasedMoreUndernames?: CategoryDetails;
   controllersAdded?: CategoryDetails;
   joinedGateway?: CategoryDetails;
+  goodGateway?: CategoryDetails;
+  goodObserver?: CategoryDetails;
+  delegatedStakers?: CategoryDetails;
+  stakedGateways?: CategoryDetails;
+  ioBalance?: CategoryDetails;
+  arDriveBalance?: CategoryDetails;
+  uBalance?: CategoryDetails;
 };
 
 export type CategoryDetails = {
-  name: string;
+  value: string | number;
   exp: number;
   awardedOnSprint: number;
 };
@@ -60,17 +77,6 @@ export type FaucetRecipient = {
   transferTxId: string;
   timestamp: number;
 };
-
-export interface HistoricalScoreDetail {
-  totalPoints: number;
-  totalNames: number;
-  names: string[];
-  categories: Categories;
-}
-
-export interface HistoricalScores {
-  [owner: string]: HistoricalScoreDetail;
-}
 
 export type WalletAddress = string;
 export type TransactionId = string;

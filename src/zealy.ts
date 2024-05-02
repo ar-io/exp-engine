@@ -2,7 +2,7 @@ import { mintEXP } from "./aoconnect";
 import { devKey } from "./apikeys";
 import {
   enrichRecords,
-  fetchAndSaveState,
+  fetchAndSaveIOState,
   transferTestTokens,
   verifyNameQuests,
 } from "./ar-io";
@@ -14,17 +14,18 @@ import {
   MIN_FAUCET_XP,
   ROOT_DATA_POINTER_SET_REWARD,
   UNDERNAME_DATA_POINTER_SET_REWARD,
-  ZEALY_URL,
+  ZEALY_DEV_URL,
 } from "./constants";
 import { AirdropList, FaucetRecipient } from "./types";
 import {
   getCurrentBlockHeight,
+  isArweaveAddress,
   loadJsonFile,
   saveJsonToFile,
 } from "./utilities";
 import path from "path";
 
-const zealyUrl = ZEALY_URL;
+const zealyUrl = ZEALY_DEV_URL;
 export async function getLeaderboard() {
   const response = await fetch(`${zealyUrl}/leaderboard`, {
     method: "GET",
@@ -71,7 +72,10 @@ export async function runZealyFaucet(dryRun?: boolean) {
   for (let i = 0; i < zealyUsers.length; i += 1) {
     const zealyUser: any = zealyUsers[i];
     if (zealyUser.xp >= MIN_FAUCET_XP) {
-      if (zealyUser.unVerifiedBlockchainAddresses.arweave) {
+      if (
+        zealyUser.unVerifiedBlockchainAddresses.arweave &&
+        isArweaveAddress(zealyUser.unVerifiedBlockchainAddresses.arweave)
+      ) {
         const arweaveAddress = zealyUser.unVerifiedBlockchainAddresses.arweave;
         console.log(
           `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
@@ -136,7 +140,7 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
 
   if (!enrichedCache) {
     const blockHeight = await getCurrentBlockHeight();
-    const state = await fetchAndSaveState(blockHeight);
+    const state = await fetchAndSaveIOState(blockHeight);
     enrichedCache.records = await enrichRecords(CACHE_URL, state.records);
   }
 
@@ -182,8 +186,6 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
           arweaveAddress,
           enrichedCache.records
         );
-        console.log("quests completed: ");
-        console.log(nameQuestsCompleted);
 
         // Check if a name was created
         if (
@@ -191,7 +193,7 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
           !airdropList.recipients[arweaveAddress].categories.basicName
         ) {
           airdropList.recipients[arweaveAddress].categories.basicName = {
-            name: nameQuestsCompleted.basicName,
+            value: nameQuestsCompleted.basicName,
             exp: BASIC_NAME_REWARD,
             awardedOnSprint: sprintId,
           };
@@ -204,7 +206,7 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
           !airdropList.recipients[arweaveAddress].categories.basicUndername
         ) {
           airdropList.recipients[arweaveAddress].categories.basicUndername = {
-            name: nameQuestsCompleted.basicUndername,
+            value: nameQuestsCompleted.basicUndername,
             exp: BASIC_UNDERNAME_REWARD,
             awardedOnSprint: sprintId,
           };
@@ -218,7 +220,7 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
         ) {
           airdropList.recipients[arweaveAddress].categories.rootDataPointerSet =
             {
-              name: nameQuestsCompleted.rootDataPointerSet,
+              value: nameQuestsCompleted.rootDataPointerSet,
               exp: ROOT_DATA_POINTER_SET_REWARD,
               awardedOnSprint: sprintId,
             };
@@ -235,7 +237,7 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
           airdropList.recipients[
             arweaveAddress
           ].categories.undernameDataPointerSet = {
-            name: nameQuestsCompleted.undernameDataPointerSet,
+            value: nameQuestsCompleted.undernameDataPointerSet,
             exp: UNDERNAME_DATA_POINTER_SET_REWARD,
             awardedOnSprint: sprintId,
           };

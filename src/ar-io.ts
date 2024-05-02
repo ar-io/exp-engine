@@ -4,18 +4,15 @@ import {
   DEFAULT_ARNS_DATA_POINTER,
   ZEALY_START_TIMESTAMP,
 } from "./constants";
-import { calculateHistoricalExp } from "./exp";
 import { CachedRecords, JWKInterface } from "./types";
 import {
   getCurrentBlockHeight,
   isArweaveAddress,
-  loadJsonFile,
   loadWallet,
   retryFetch,
   saveJsonToFile,
 } from "./utilities";
 import { ArIO, ArweaveSigner, DENOMINATIONS } from "@ar.io/sdk";
-import path from "path";
 
 export async function transferTestTokens(
   target: string,
@@ -116,14 +113,12 @@ export async function verifyNameQuests(owner: string, enrichedRecords: any) {
         enrichedRecords[record].contract.records["@"].transactionId ===
         DEFAULT_ARNS_DATA_POINTER
       ) {
-        console.log("Basic Name");
         basicName = record;
       } else if (
         isArweaveAddress(
           enrichedRecords[record].contract.records["@"].transactionId
         )
       ) {
-        console.log("Set name");
         basicName = record;
         rootDataPointerSet =
           enrichedRecords[record].contract.records["@"].transactionId;
@@ -136,7 +131,6 @@ export async function verifyNameQuests(owner: string, enrichedRecords: any) {
             enrichedRecords[record].contract.records[undername]
               .transactionId === DEFAULT_ARNS_DATA_POINTER
           ) {
-            console.log("basic undername");
             basicUndername = undername; // do not break in case we want to check if other undernames have the data pointer set
           } else if (
             undername !== "@" &&
@@ -144,7 +138,6 @@ export async function verifyNameQuests(owner: string, enrichedRecords: any) {
               enrichedRecords[record].contract.records[undername].transactionId
             )
           ) {
-            console.log("Set undername");
             basicUndername = undername;
             undernameDataPointerSet =
               enrichedRecords[record].contract.records[undername].transactionId;
@@ -180,7 +173,7 @@ export async function fetchAndSaveCache() {
   }
 }
 
-export async function fetchAndSaveState(blockHeight: number) {
+export async function fetchAndSaveIOState(blockHeight: number) {
   try {
     const state = await getState(blockHeight);
     const enrichedRecords = await enrichRecords(CACHE_URL, state.records);
@@ -196,39 +189,4 @@ export async function fetchAndSaveState(blockHeight: number) {
     console.log(err);
     return false;
   }
-}
-
-export async function calculateHistoricalExpRewards(blockHeight?: number) {
-  let state: any = {};
-  if (blockHeight) {
-    const cacheFilePath = path.join(
-      __dirname,
-      "..",
-      "data",
-      `ar-io-state-${blockHeight}.json`
-    );
-    try {
-      state = await loadJsonFile(cacheFilePath);
-    } catch {
-      console.log(
-        `Fetching and saving the ar.io cache at block height ${blockHeight}`
-      );
-      state = await fetchAndSaveState(blockHeight);
-    }
-  } else {
-    console.log(
-      "Fetching and saving the latest ar.io cache at current block height"
-    );
-    blockHeight = await getCurrentBlockHeight();
-    state = await fetchAndSaveState(blockHeight);
-  }
-
-  let scores = {};
-  if (state) {
-    console.log("Analyzing AR.IO State and calculating EXP Rewards");
-    const scores = calculateHistoricalExp(state.records, state.gateways);
-    const fileName = "historical-exp-rewards-" + blockHeight + ".json";
-    saveJsonToFile(scores, fileName);
-  }
-  return { scores, state };
 }

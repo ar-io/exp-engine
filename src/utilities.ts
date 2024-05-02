@@ -80,6 +80,22 @@ export function loadJsonFile(filePath: string): Promise<any> {
   });
 }
 
+export async function loadJsonStateFile(blockHeight: number): Promise<any> {
+  let state: any = {};
+  const cacheFilePath = path.join(
+    __dirname,
+    "..",
+    "data",
+    `ar-io-state-${blockHeight}.json`
+  );
+  try {
+    state = await loadJsonFile(cacheFilePath);
+  } catch {
+    console.log(`No saved state found at block height ${blockHeight}`);
+  }
+  return state;
+}
+
 export function isArweaveAddress(address: string): boolean {
   const trimmedAddress = address.toString().trim();
   const ARWEAVE_TX_REGEX = new RegExp("^[a-zA-Z0-9-_s+]{43}$");
