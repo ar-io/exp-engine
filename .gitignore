@@ -37,3 +37,8 @@ npm-debug.log.*
 *.sass.d.ts
 *.scss.d.ts
 *.db
+yarn.lock
+
+# private keys and api keys
+key.json
+/src/apikeys.ts
