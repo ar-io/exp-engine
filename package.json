@@ -51,7 +51,8 @@
     "preversion": "yarn run lint",
     "version": "yarn run format && git add -A src",
     "postversion": "git push && git push --tags",
-    "start": "yarn run build && node ./lib/index.js"
+    "start": "yarn run build && node ./lib/index.js",
+    "test": "yarn run build && node ./lib/test.js"
   },
   "lint-staged": {
     "**/*.{ts,js,json}": [
