@@ -4,8 +4,6 @@ import { runZealyAirdrop, runZealyFaucet } from "./zealy";
 const cron = require("node-cron");
 
 export async function runFaucetCron(dryRun?: boolean, minutes: number = 15) {
-  // Run the faucet first, then schedule every 15 minutes
-  await runZealyFaucet(dryRun);
   console.log(`Running Zealy tIO Faucet every ${minutes} minutes.`);
   cron.schedule(`*/${minutes} * * * *`, function () {
     runZealyFaucet(dryRun);

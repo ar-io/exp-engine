@@ -58,6 +58,8 @@ export type Categories = {
   ioBalance?: CategoryDetails;
   arDriveBalance?: CategoryDetails;
   uBalance?: CategoryDetails;
+  turboTopUpSnapshot?: CategoryDetails;
+  turbo1GBUploadSnapshot?: CategoryDetails;
 };
 
 export type CategoryDetails = {

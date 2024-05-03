@@ -18,6 +18,8 @@ import {
   HISTORICAL_TEST_TOKEN_HOLDER_REWARD,
   HISTORICAL_UNDERNAME_DATA_POINTER_SET_REWARD,
   HISTORICAL_U_REWARD,
+  HISTORICAL_TURBO_TOP_UP_REWARD,
+  HISTORICAL_TURBO_1GB_REWARD,
 } from "./constants";
 import {
   Balances,
@@ -39,8 +41,10 @@ export function calculateHistoricalExp(
   records: CachedRecords,
   gateways: Gateways,
   ioBalances: Balances,
-  arDriveBalances: Balances,
-  uBalances: Balances
+  arDriveState: any,
+  uBalances: Balances,
+  turboTopUpSnapshot: Balances,
+  turbo1GBUploadSnapshot: Balances
 ): HistoricalScores {
   const scores: HistoricalScores = {};
 
@@ -269,90 +273,128 @@ export function calculateHistoricalExp(
         };
       }
     }
+  }
+  // Points for having test IO tokens
+  for (const owner in ioBalances) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+    if (!scores[owner].categories.ioBalance) {
+      scores[owner].totalPoints += HISTORICAL_TEST_TOKEN_HOLDER_REWARD;
+      scores[owner].categories.ioBalance = {
+        value: ioBalances[owner],
+        exp: HISTORICAL_TEST_TOKEN_HOLDER_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
 
-    // Points for having test IO tokens
-    for (const owner in ioBalances) {
-      // Initialize the score detail if not already
-      if (!scores[owner]) {
-        scores[owner] = {
-          totalPoints: 0,
-          totalNames: 0,
-          names: [],
-          categories: {},
-        };
-      }
-      if (!scores[owner].categories.ioBalance) {
-        scores[owner].totalPoints += HISTORICAL_TEST_TOKEN_HOLDER_REWARD;
-        scores[owner].categories.ioBalance = {
-          value: ioBalances[owner],
-          exp: HISTORICAL_TEST_TOKEN_HOLDER_REWARD,
+  // Points for having ArDrive tokens
+  for (const owner in arDriveState.balances) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+    if (!scores[owner].categories.arDriveBalance) {
+      let arDriveExp = 0;
+      if (arDriveState.balances[owner] !== 0) {
+        arDriveExp =
+          (HISTORICAL_BASIC_ARDRIVE_REWARD +
+            Math.floor(
+              arDriveState.balances[owner] / HISTORICAL_ARDRIVE_EXP_RATIO
+            )) |
+          HISTORICAL_BASIC_ARDRIVE_REWARD;
+        scores[owner].totalPoints += arDriveExp;
+        scores[owner].categories.arDriveBalance = {
+          value: arDriveState.balances[owner],
+          exp: arDriveExp,
           awardedOnSprint: 0,
         };
       }
     }
-
-    // Points for having ArDrive tokens
-    for (const owner in arDriveBalances) {
-      // Initialize the score detail if not already
-      if (!scores[owner]) {
-        scores[owner] = {
-          totalPoints: 0,
-          totalNames: 0,
-          names: [],
-          categories: {},
-        };
-      }
-      if (!scores[owner].categories.arDriveBalance) {
-        let arDriveExp = 0;
-        if (arDriveBalances[owner] !== 0) {
-          arDriveExp =
-            (HISTORICAL_BASIC_ARDRIVE_REWARD +
-              Math.floor(
-                arDriveBalances[owner] / HISTORICAL_ARDRIVE_EXP_RATIO
-              )) |
-            HISTORICAL_BASIC_ARDRIVE_REWARD;
-          scores[owner].totalPoints += arDriveExp;
-          scores[owner].categories.arDriveBalance = {
-            value: arDriveBalances[owner],
-            exp: arDriveExp,
-            awardedOnSprint: 0,
-          };
-        }
-      }
-    }
-
-    // Points for having U tokens
-    for (const owner in uBalances) {
-      // Initialize the score detail if not already
-      if (!scores[owner]) {
-        scores[owner] = {
-          totalPoints: 0,
-          totalNames: 0,
-          names: [],
-          categories: {},
-        };
-      }
-      if (!scores[owner].categories.uBalance) {
-        if (uBalances[owner] !== 0) {
-          scores[owner].totalPoints += HISTORICAL_U_REWARD;
-          scores[owner].categories.uBalance = {
-            value: uBalances[owner],
-            exp: HISTORICAL_U_REWARD,
-            awardedOnSprint: 0,
-          };
-        }
-      }
-    }
-
-    // FILTER OUT ALL TEAM/INVESTOR WALLETS
   }
 
-  // TO DO: CLEAR OUT USERS WITH 0 EXP TO GIVE
+  // Points for having U tokens
+  for (const owner in uBalances) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+    if (!scores[owner].categories.uBalance) {
+      if (uBalances[owner] !== 0) {
+        scores[owner].totalPoints += HISTORICAL_U_REWARD;
+        scores[owner].categories.uBalance = {
+          value: uBalances[owner],
+          exp: HISTORICAL_U_REWARD,
+          awardedOnSprint: 0,
+        };
+      }
+    }
+  }
+
+  // Points for having topped up with turbo
+  for (const owner in turboTopUpSnapshot) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+
+    if (!scores[owner].categories.turboTopUpSnapshot) {
+      scores[owner].totalPoints += HISTORICAL_TURBO_TOP_UP_REWARD;
+      scores[owner].categories.turboTopUpSnapshot = {
+        value: HISTORICAL_TURBO_TOP_UP_REWARD,
+        exp: HISTORICAL_TURBO_TOP_UP_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
+  // Points for having uploaded more than 1GB to turbo
+  for (const owner in turbo1GBUploadSnapshot) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+
+    if (!scores[owner].categories.turbo1GBUploadSnapshot) {
+      scores[owner].totalPoints += HISTORICAL_TURBO_1GB_REWARD;
+      scores[owner].categories.turbo1GBUploadSnapshot = {
+        value: HISTORICAL_TURBO_1GB_REWARD,
+        exp: HISTORICAL_TURBO_1GB_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
   // TO DO: FILTER OUT TEAM WALLETS
-  // TO DO: ADD TURBO TOPUP/1GB UPLOADS
   // TO DO: ADD AR HOLDERS
   // TO DO: ADD ARDRIVE UPLOADERS
-  // TO DO: ADD AR UPLOADERS
   // TO DO: ADD GNAT, GATEWAY OG AND OBSERVER OG
   // TO DO: ADD EVENT PEOPLE
 
@@ -368,6 +410,8 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
   let ioState: any = {};
   let arDriveState: any = {};
   let uState: any = {};
+  let turboTopUpSnapshot: any = {};
+  let turbo1GBUploadSnapshot: any = {};
   if (blockHeight) {
     const ioStatePath = path.join(
       __dirname,
@@ -387,10 +431,24 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       "data",
       `u-state-1416315.json` // TO DO: SET THIS TO BE DYNAMIC
     );
+    const turboTopUpSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `turbo_top_up_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
+    const turbo1GBUploadSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `turbo_1gb_upload_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
     try {
       ioState = await loadJsonFile(ioStatePath);
       arDriveState = await loadJsonFile(ardriveStatePath);
       uState = await loadJsonFile(uStatePath);
+      turboTopUpSnapshot = await loadJsonFile(turboTopUpSnapshotPath);
+      turbo1GBUploadSnapshot = await loadJsonFile(turbo1GBUploadSnapshotPath);
     } catch {
       console.log(
         `Fetching and saving the ar.io cache at block height ${blockHeight}`
@@ -412,8 +470,10 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       ioState.records,
       ioState.gateways,
       ioState.balances,
-      arDriveState.state.balances,
-      uState.balances
+      arDriveState.state,
+      uState.balances,
+      turboTopUpSnapshot.balances,
+      turbo1GBUploadSnapshot.balances
     );
     const fileName = "historical-exp-rewards-" + blockHeight + ".json";
     saveJsonToFile(scores, fileName);
@@ -446,6 +506,8 @@ function analyzeScores(data: HistoricalScores): void {
     "ioBalance",
     "arDriveBalance",
     "uBalance",
+    "turboTopUpSnapshot",
+    "turbo1GBUploadSnapshot",
   ];
 
   allCategories.forEach(
