@@ -1,14 +1,26 @@
 export const keyfile = process.env.WALLET_FILE_PATH || "key.json";
 
-export const MIN_FAUCET_XP = 1000; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
-
-// OTHER REWARDS
+// ECOSYSTEM REWARDS
 export const HISTORICAL_TEST_TOKEN_HOLDER_REWARD = 50;
-export const HISTORICAL_BASIC_ARDRIVE_REWARD = 100;
-export const HISTORICAL_ARDRIVE_EXP_RATIO = 2;
 export const HISTORICAL_U_REWARD = 50;
+export const HISTORICAL_EVENT_ATTENDEE_REWARD = 200;
+// ARWEAVE REWARDS
+
+// MANIFEST UPLOADERS
+export const HISTORICAL_MAX_ARWEAVE_UPLOAD_REWARD = 400;
+export const HISTORICAL_LARGE_ARWEAVE_UPLOAD_REWARD = 200;
+export const HISTORICAL_MEDIUM_ARWEAVE_UPLOAD_REWARD = 100;
+export const HISTORICAL_SMALL_ARWEAVE_UPLOAD_REWARD = 50;
+
+// ARDRIVE REWARDS
+export const HISTORICAL_BASIC_ARDRIVE_TOKEN_REWARD = 100;
+export const HISTORICAL_ARDRIVE_EXP_RATIO = 2;
 export const HISTORICAL_TURBO_TOP_UP_REWARD = 100;
 export const HISTORICAL_TURBO_1GB_REWARD = 100;
+export const HISTORICAL_MAX_ARDRIVE_UPLOAD_REWARD = 400;
+export const HISTORICAL_LARGE_ARDRIVE_UPLOAD_REWARD = 200;
+export const HISTORICAL_MEDIUM_ARDRIVE_UPLOAD_REWARD = 100;
+export const HISTORICAL_SMALL_ARDRIVE_UPLOAD_REWARD = 50;
 
 // HISTORICAL ARNS REWARDS
 export const HISTORICAL_BASIC_NAME_REWARD = 200;
@@ -20,10 +32,13 @@ export const HISTORICAL_CONTROLLER_REWARD = 100;
 
 // HISTORICAL GATEWAY REWARDS
 export const HISTORICAL_JOINED_GATEWAY_REWARD = 200;
-export const HISTORICAL_GOOD_GATEWAY_REWARD = 400;
-export const HISTORICAL_GOOD_OBSERVER_REWARD = 200;
+export const HISTORICAL_GOOD_GATEWAY_REWARD = 500;
+export const HISTORICAL_GOOD_OBSERVER_REWARD = 500;
 export const HISTORICAL_MANY_DELEGATES_REWARD = 100;
 export const HISTORICAL_BASIC_DELEGATES_REWARD = 100;
+export const HISTORICAL_CUSTOM_GATEWAY_NOTE_REWARD = 100;
+export const HISTORICAL_OG_GATEWAY_REWARD = 400;
+export const HISTORICAL_OG_OBSERVER_REWARD = 300;
 
 // HISTORICAL DELEGATED STAKER REWARDS
 export const HISTORICAL_BASIC_STAKED_GATEWAYS_REWARD = 100;
@@ -40,11 +55,11 @@ export const ZEALY_START_TIMESTAMP = 1711954647;
 
 // ZEALY
 export const ZEALY_URL = "https://api-v2.zealy.io/public/communities/";
-export const FAUCET_QUANTITY = 1000;
-
-// export const ZEALY_PROD_URL = ZEALY_URL + 'ar-io'
-// export const ZEALY_TEST_URL = ZEALY_URL + 'theawesomecommunity'
+export const FAUCET_QUANTITY = 1250;
+export const ZEALY_PROD_URL = ZEALY_URL + "ar-io";
+export const ZEALY_TEST_URL = ZEALY_URL + "theawesomecommunity";
 export const ZEALY_DEV_URL = ZEALY_URL + "theblackfox";
+export const MIN_FAUCET_XP = 500; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
 
 // AR.IO NETWORK
 export const GATEWAY_URL = "https://arweave.net/";

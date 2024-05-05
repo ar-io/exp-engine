@@ -73,6 +73,7 @@ export function loadJsonFile(filePath: string): Promise<any> {
           const jsonData = JSON.parse(data);
           resolve(jsonData);
         } catch (parseError) {
+          console.log("Error processing: ", filePath);
           reject(parseError);
         }
       }

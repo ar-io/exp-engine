@@ -2,7 +2,7 @@ import { fetchAndSaveIOState } from "./ar-io";
 import {
   DEFAULT_ARNS_DATA_POINTER,
   HISTORICAL_ARDRIVE_EXP_RATIO,
-  HISTORICAL_BASIC_ARDRIVE_REWARD,
+  HISTORICAL_BASIC_ARDRIVE_TOKEN_REWARD,
   HISTORICAL_BASIC_DELEGATES_REWARD,
   HISTORICAL_BASIC_NAME_REWARD,
   HISTORICAL_BASIC_STAKED_GATEWAYS_REWARD,
@@ -20,6 +20,18 @@ import {
   HISTORICAL_U_REWARD,
   HISTORICAL_TURBO_TOP_UP_REWARD,
   HISTORICAL_TURBO_1GB_REWARD,
+  HISTORICAL_CUSTOM_GATEWAY_NOTE_REWARD,
+  HISTORICAL_OG_GATEWAY_REWARD,
+  HISTORICAL_OG_OBSERVER_REWARD,
+  HISTORICAL_SMALL_ARDRIVE_UPLOAD_REWARD,
+  HISTORICAL_MEDIUM_ARDRIVE_UPLOAD_REWARD,
+  HISTORICAL_LARGE_ARDRIVE_UPLOAD_REWARD,
+  HISTORICAL_MAX_ARDRIVE_UPLOAD_REWARD,
+  HISTORICAL_LARGE_ARWEAVE_UPLOAD_REWARD,
+  HISTORICAL_MAX_ARWEAVE_UPLOAD_REWARD,
+  HISTORICAL_MEDIUM_ARWEAVE_UPLOAD_REWARD,
+  HISTORICAL_SMALL_ARWEAVE_UPLOAD_REWARD,
+  HISTORICAL_EVENT_ATTENDEE_REWARD,
 } from "./constants";
 import {
   Balances,
@@ -43,8 +55,14 @@ export function calculateHistoricalExp(
   ioBalances: Balances,
   arDriveState: any,
   uBalances: Balances,
-  turboTopUpSnapshot: Balances,
-  turbo1GBUploadSnapshot: Balances
+  turboTopUpBalances: Balances,
+  turbo1GBUploadBalances: Balances,
+  ogGatewayBalances: Balances,
+  ogObserverBalances: Balances,
+  exemptWallets: Balances,
+  arDriveUploaders: Balances,
+  arweaveUploaders: Balances,
+  eventAttendees: Balances
 ): HistoricalScores {
   const scores: HistoricalScores = {};
 
@@ -237,6 +255,19 @@ export function calculateHistoricalExp(
       };
     }
 
+    // Points for customizing gateway note
+    if (
+      !scores[owner].categories.customGatewayName &&
+      gateway.settings.note === "Owned and operated by DTF."
+    ) {
+      scores[owner].totalPoints += HISTORICAL_CUSTOM_GATEWAY_NOTE_REWARD;
+      scores[owner].categories.delegatedStakers = {
+        value: fqdn,
+        exp: HISTORICAL_CUSTOM_GATEWAY_NOTE_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+
     // Points for delegating stake
     for (const delegate in gateway.delegates) {
       // Initialize the score detail if not already
@@ -310,11 +341,11 @@ export function calculateHistoricalExp(
       let arDriveExp = 0;
       if (arDriveState.balances[owner] !== 0) {
         arDriveExp =
-          (HISTORICAL_BASIC_ARDRIVE_REWARD +
+          (HISTORICAL_BASIC_ARDRIVE_TOKEN_REWARD +
             Math.floor(
               arDriveState.balances[owner] / HISTORICAL_ARDRIVE_EXP_RATIO
             )) |
-          HISTORICAL_BASIC_ARDRIVE_REWARD;
+          HISTORICAL_BASIC_ARDRIVE_TOKEN_REWARD;
         scores[owner].totalPoints += arDriveExp;
         scores[owner].categories.arDriveBalance = {
           value: arDriveState.balances[owner],
@@ -349,7 +380,7 @@ export function calculateHistoricalExp(
   }
 
   // Points for having topped up with turbo
-  for (const owner in turboTopUpSnapshot) {
+  for (const owner in turboTopUpBalances) {
     // Initialize the score detail if not already
     if (!scores[owner]) {
       scores[owner] = {
@@ -363,7 +394,7 @@ export function calculateHistoricalExp(
     if (!scores[owner].categories.turboTopUpSnapshot) {
       scores[owner].totalPoints += HISTORICAL_TURBO_TOP_UP_REWARD;
       scores[owner].categories.turboTopUpSnapshot = {
-        value: HISTORICAL_TURBO_TOP_UP_REWARD,
+        value: 1,
         exp: HISTORICAL_TURBO_TOP_UP_REWARD,
         awardedOnSprint: 0,
       };
@@ -371,7 +402,7 @@ export function calculateHistoricalExp(
   }
 
   // Points for having uploaded more than 1GB to turbo
-  for (const owner in turbo1GBUploadSnapshot) {
+  for (const owner in turbo1GBUploadBalances) {
     // Initialize the score detail if not already
     if (!scores[owner]) {
       scores[owner] = {
@@ -385,22 +416,180 @@ export function calculateHistoricalExp(
     if (!scores[owner].categories.turbo1GBUploadSnapshot) {
       scores[owner].totalPoints += HISTORICAL_TURBO_1GB_REWARD;
       scores[owner].categories.turbo1GBUploadSnapshot = {
-        value: HISTORICAL_TURBO_1GB_REWARD,
+        value: 1,
         exp: HISTORICAL_TURBO_1GB_REWARD,
         awardedOnSprint: 0,
       };
     }
   }
 
-  // TO DO: FILTER OUT TEAM WALLETS
-  // TO DO: ADD AR HOLDERS
-  // TO DO: ADD ARDRIVE UPLOADERS
-  // TO DO: ADD GNAT, GATEWAY OG AND OBSERVER OG
-  // TO DO: ADD EVENT PEOPLE
+  // Points for being an OG Gateway
+  for (const owner in ogGatewayBalances) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
 
-  for (const key in scores) {
-    if (scores[key].totalPoints === 0) {
-      delete scores[key];
+    if (!scores[owner].categories.ogGateway) {
+      scores[owner].totalPoints += HISTORICAL_OG_GATEWAY_REWARD;
+      scores[owner].categories.ogGateway = {
+        value: 1,
+        exp: HISTORICAL_OG_GATEWAY_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
+  // Points for being an OG Observer
+  for (const owner in ogObserverBalances) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+
+    if (!scores[owner].categories.ogObserver) {
+      scores[owner].totalPoints += HISTORICAL_OG_OBSERVER_REWARD;
+      scores[owner].categories.ogObserver = {
+        value: 1,
+        exp: HISTORICAL_OG_OBSERVER_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
+  // Points for uploading data to ArDrive
+  for (const owner in arDriveUploaders) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+
+    if (
+      !scores[owner].categories.arDriveUserUploads &&
+      arDriveUploaders[owner] >= 100_000
+    ) {
+      let arDriveReward = 0;
+      if (
+        arDriveUploaders[owner] >= 100_000 &&
+        arDriveUploaders[owner] < 100_000_000
+      ) {
+        arDriveReward = HISTORICAL_SMALL_ARDRIVE_UPLOAD_REWARD;
+      } else if (
+        arDriveUploaders[owner] >= 100_000_000 &&
+        arDriveUploaders[owner] < 1_000_000_000_000
+      ) {
+        arDriveReward = HISTORICAL_MEDIUM_ARDRIVE_UPLOAD_REWARD;
+      } else if (
+        arDriveUploaders[owner] >= 1_000_000_000_000 &&
+        arDriveUploaders[owner] < 10_000_000_000_000
+      ) {
+        arDriveReward = HISTORICAL_LARGE_ARDRIVE_UPLOAD_REWARD;
+      } else if (arDriveUploaders[owner] >= 10_000_000_000_000) {
+        arDriveReward = HISTORICAL_MAX_ARDRIVE_UPLOAD_REWARD;
+      }
+      scores[owner].totalPoints += arDriveReward;
+      scores[owner].categories.arDriveUserUploads = {
+        value: arDriveUploaders[owner],
+        exp: arDriveReward,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
+  // Points for having uploaded data to Arweave
+  for (const owner in arweaveUploaders) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+
+    if (
+      !scores[owner].categories.arweaveUserUploads &&
+      arweaveUploaders[owner] >= 100_000
+    ) {
+      let arweaveReward = 0;
+      if (
+        arweaveUploaders[owner] >= 5_000_000 &&
+        arweaveUploaders[owner] < 500_000_000
+      ) {
+        arweaveReward = HISTORICAL_SMALL_ARWEAVE_UPLOAD_REWARD;
+      } else if (
+        arweaveUploaders[owner] >= 500_000_000 &&
+        arweaveUploaders[owner] < 5_000_000_000_000
+      ) {
+        arweaveReward = HISTORICAL_MEDIUM_ARWEAVE_UPLOAD_REWARD;
+      } else if (
+        arweaveUploaders[owner] >= 5_000_000_000_000 &&
+        arweaveUploaders[owner] < 50_000_000_000_000
+      ) {
+        arweaveReward = HISTORICAL_LARGE_ARWEAVE_UPLOAD_REWARD;
+      } else if (arDriveUploaders[owner] >= 50_000_000_000_000) {
+        arweaveReward = HISTORICAL_MAX_ARWEAVE_UPLOAD_REWARD;
+      }
+      scores[owner].totalPoints += arweaveReward;
+      scores[owner].categories.arweaveUserUploads = {
+        value: arweaveUploaders[owner],
+        exp: arweaveReward,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
+  // Points for attending an event
+  for (const owner in eventAttendees) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+
+    if (!scores[owner].categories.eventAttendee) {
+      scores[owner].totalPoints += HISTORICAL_EVENT_ATTENDEE_REWARD;
+      scores[owner].categories.eventAttendee = {
+        value: 1,
+        exp: HISTORICAL_EVENT_ATTENDEE_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
+  // TO DO: ADD AR HOLDERS
+
+  // Filter out team wallets
+  for (const owner in exemptWallets) {
+    if (scores[owner]) {
+      delete scores[owner];
+    }
+  }
+
+  // Filter out empty scores
+  for (const owner in scores) {
+    if (scores[owner].totalPoints === 0) {
+      delete scores[owner];
     }
   }
   return scores;
@@ -412,6 +601,13 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
   let uState: any = {};
   let turboTopUpSnapshot: any = {};
   let turbo1GBUploadSnapshot: any = {};
+  let ogGatewaySnapshot: any = {};
+  let ogObserverSnapshot: any = {};
+  let exemptWalletSnapshot: any = {};
+  let arDriveUsersSnapshot: any = {};
+  let arweaveUsersSnapshot: any = {};
+  let eventAttendeesSnapshot: any = {};
+
   if (blockHeight) {
     const ioStatePath = path.join(
       __dirname,
@@ -443,13 +639,57 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       "data",
       `turbo_1gb_upload_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
     );
+    const ogGatewaySnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `testnet_og_gateway_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
+    const ogObserverSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `testnet_og_observer_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
+    const exemptWalletSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `exempt_team_wallet_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
+    const arDriveUsersSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `ardrive_users_1415082.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
+    const arweaveUsersSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `arweave_users_1415082.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
+    const eventAttendeesSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `event_attendees.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
+
     try {
       ioState = await loadJsonFile(ioStatePath);
       arDriveState = await loadJsonFile(ardriveStatePath);
       uState = await loadJsonFile(uStatePath);
       turboTopUpSnapshot = await loadJsonFile(turboTopUpSnapshotPath);
       turbo1GBUploadSnapshot = await loadJsonFile(turbo1GBUploadSnapshotPath);
-    } catch {
+      ogGatewaySnapshot = await loadJsonFile(ogGatewaySnapshotPath);
+      ogObserverSnapshot = await loadJsonFile(ogObserverSnapshotPath);
+      exemptWalletSnapshot = await loadJsonFile(exemptWalletSnapshotPath);
+      arDriveUsersSnapshot = await loadJsonFile(arDriveUsersSnapshotPath);
+      arweaveUsersSnapshot = await loadJsonFile(arweaveUsersSnapshotPath);
+      eventAttendeesSnapshot = await loadJsonFile(eventAttendeesSnapshotPath);
+    } catch (err) {
+      console.log(err);
       console.log(
         `Fetching and saving the ar.io cache at block height ${blockHeight}`
       );
@@ -464,7 +704,7 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
   }
 
   let scores = {};
-  if (ioState && arDriveState) {
+  if (ioState) {
     console.log("Analyzing snapshot and calculating EXP Rewards");
     scores = calculateHistoricalExp(
       ioState.records,
@@ -473,7 +713,13 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       arDriveState.state,
       uState.balances,
       turboTopUpSnapshot.balances,
-      turbo1GBUploadSnapshot.balances
+      turbo1GBUploadSnapshot.balances,
+      ogGatewaySnapshot.balances,
+      ogObserverSnapshot.balances,
+      exemptWalletSnapshot.balances,
+      arDriveUsersSnapshot.uploads,
+      arweaveUsersSnapshot.uploads,
+      eventAttendeesSnapshot.attendees
     );
     const fileName = "historical-exp-rewards-" + blockHeight + ".json";
     saveJsonToFile(scores, fileName);
@@ -486,6 +732,7 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
 function analyzeScores(data: HistoricalScores): void {
   let totalParticipants = 0;
   let grandTotalPoints = 0;
+  let highestPoints = 0;
   const categoryExpSummary: Record<string, number> = {};
   const categoryParticipantCounts: Record<string, number> = {};
   let allCategoriesCount = 0;
@@ -498,16 +745,22 @@ function analyzeScores(data: HistoricalScores): void {
     "rootDataPointerSet",
     "undernameDataPointerSet",
     "controllersAdded",
+    "ogGateway",
+    "ogObserver",
     "joinedGateway",
     "goodGateway",
     "goodObserver",
     "delegatedStakers",
+    "customGatewayName",
     "stakedGateways",
     "ioBalance",
     "arDriveBalance",
     "uBalance",
     "turboTopUpSnapshot",
     "turbo1GBUploadSnapshot",
+    "arDriveUserUploads",
+    "arweaveUserUploads",
+    "eventAttendee",
   ];
 
   allCategories.forEach(
@@ -516,6 +769,9 @@ function analyzeScores(data: HistoricalScores): void {
 
   for (const owner in data) {
     const { totalPoints, categories } = data[owner];
+    if (highestPoints < totalPoints) {
+      highestPoints = totalPoints;
+    }
     grandTotalPoints += totalPoints;
     totalParticipants++;
     let allCategoriesPresent = true;
@@ -551,6 +807,7 @@ function analyzeScores(data: HistoricalScores): void {
   console.log(`Grand Total Points: ${grandTotalPoints}`);
   console.log("Category Participation Counts:", categoryParticipantCounts);
   console.log("Users with All Categories:", allCategoriesCount);
+  console.log("Highest EXP earned: ", highestPoints);
   console.log(`Average EXP per User: ${averageEXP.toFixed(2)}`);
   console.log("EXP by Category:", categoryExpSummary);
 }

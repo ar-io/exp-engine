@@ -25,8 +25,7 @@ import {
 } from "./utilities";
 import path from "path";
 
-const zealyUrl = ZEALY_DEV_URL;
-export async function getLeaderboard() {
+export async function getLeaderboard(zealyUrl: string) {
   const response = await fetch(`${zealyUrl}/leaderboard`, {
     method: "GET",
     headers: { "x-api-key": devKey },
@@ -34,13 +33,13 @@ export async function getLeaderboard() {
   const data: any = await response.json();
   const zealyUserArray: any[] = [];
   for (let i = 0; i < data.data.length; i += 1) {
-    const userData: any = await getUserInfo(data.data[i].userId);
+    const userData: any = await getUserInfo(data.data[i].userId, zealyUrl);
     zealyUserArray.push(userData);
   }
   return zealyUserArray;
 }
 
-export async function getUserInfo(zealyUserId: string) {
+export async function getUserInfo(zealyUserId: string, zealyUrl: string) {
   const response = await fetch(`${zealyUrl}/users/${zealyUserId}`, {
     method: "GET",
     headers: { "x-api-key": devKey },
@@ -48,9 +47,12 @@ export async function getUserInfo(zealyUserId: string) {
   return await response.json();
 }
 
-export async function runZealyFaucet(dryRun?: boolean) {
+export async function runZealyFaucet(
+  dryRun?: boolean,
+  zealyUrl: string = ZEALY_DEV_URL
+) {
   console.log("Running Zealy tIO Faucet");
-  const zealyUsers: any = await getLeaderboard();
+  const zealyUsers: any = await getLeaderboard(zealyUrl);
 
   let faucetRecipients: { [key: string]: FaucetRecipient } = {};
   let newFaucetRecipients: { [key: string]: FaucetRecipient } = {};
@@ -111,8 +113,12 @@ export async function runZealyFaucet(dryRun?: boolean) {
   return newFaucetRecipients;
 }
 
-export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
-  const zealyUsers: any = await getLeaderboard();
+export async function runZealyAirdrop(
+  dryRun?: boolean,
+  enrichedCache?: any,
+  zealyUrl: string = ZEALY_DEV_URL
+) {
+  const zealyUsers: any = await getLeaderboard(zealyUrl);
 
   let airdropList: AirdropList;
   try {
@@ -262,7 +268,9 @@ export async function runZealyAirdrop(dryRun?: boolean, enrichedCache?: any) {
               timestamp: Math.floor(Date.now() / 1000),
             };
         } else {
-          console.log("- No EXP to airdrop!");
+          console.log(
+            "- User earned no XP since last sprint. No EXP to airdrop!"
+          );
           airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId] =
             {
               transferTxId: "",

@@ -50,16 +50,22 @@ export type Categories = {
   rootDataPointerSet?: CategoryDetails;
   undernameDataPointerSet?: CategoryDetails;
   controllersAdded?: CategoryDetails;
+  ogGateway?: CategoryDetails;
+  ogObserver?: CategoryDetails;
   joinedGateway?: CategoryDetails;
   goodGateway?: CategoryDetails;
   goodObserver?: CategoryDetails;
   delegatedStakers?: CategoryDetails;
+  customGatewayName?: CategoryDetails;
   stakedGateways?: CategoryDetails;
   ioBalance?: CategoryDetails;
   arDriveBalance?: CategoryDetails;
   uBalance?: CategoryDetails;
   turboTopUpSnapshot?: CategoryDetails;
   turbo1GBUploadSnapshot?: CategoryDetails;
+  arDriveUserUploads?: CategoryDetails;
+  arweaveUserUploads?: CategoryDetails;
+  eventAttendee?: CategoryDetails;
 };
 
 export type CategoryDetails = {
