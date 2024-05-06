@@ -326,7 +326,7 @@ export function calculateHistoricalExp(
     }
   }
 
-  // Points for having ArDrive tokens
+  // Points for having unlocked ArDrive tokens
   for (const owner in arDriveState.balances) {
     // Initialize the score detail if not already
     if (!scores[owner]) {
@@ -349,6 +349,37 @@ export function calculateHistoricalExp(
         scores[owner].totalPoints += arDriveExp;
         scores[owner].categories.arDriveBalance = {
           value: arDriveState.balances[owner],
+          exp: arDriveExp,
+          awardedOnSprint: 0,
+        };
+      }
+    }
+  }
+
+  // Points for having vaulted ArDrive tokens
+  for (const owner in arDriveState.vault) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+    if (!scores[owner].categories.arDriveVaults) {
+      // Add up all vaults
+      let vaultBalance = arDriveState.vault[owner].reduce(
+        (total: number, vault: any) => total + vault.balance,
+        0
+      );
+      if (vaultBalance !== 0) {
+        let arDriveExp = Math.floor(
+          vaultBalance / HISTORICAL_ARDRIVE_EXP_RATIO
+        );
+        scores[owner].totalPoints += arDriveExp;
+        scores[owner].categories.arDriveVaults = {
+          value: vaultBalance,
           exp: arDriveExp,
           awardedOnSprint: 0,
         };
@@ -755,6 +786,7 @@ function analyzeScores(data: HistoricalScores): void {
     "stakedGateways",
     "ioBalance",
     "arDriveBalance",
+    "arDriveVaults",
     "uBalance",
     "turboTopUpSnapshot",
     "turbo1GBUploadSnapshot",

@@ -60,6 +60,7 @@ export type Categories = {
   stakedGateways?: CategoryDetails;
   ioBalance?: CategoryDetails;
   arDriveBalance?: CategoryDetails;
+  arDriveVaults?: CategoryDetails;
   uBalance?: CategoryDetails;
   turboTopUpSnapshot?: CategoryDetails;
   turbo1GBUploadSnapshot?: CategoryDetails;
