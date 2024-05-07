@@ -46,7 +46,7 @@ export interface HistoricalScores {
 export type Categories = {
   basicName?: CategoryDetails;
   ogName?: CategoryDetails;
-  basicUndername?: CategoryDetails;
+  multipleUndernames?: CategoryDetails;
   rootDataPointerSet?: CategoryDetails;
   undernameDataPointerSet?: CategoryDetails;
   controllersAdded?: CategoryDetails;
@@ -55,9 +55,9 @@ export type Categories = {
   joinedGateway?: CategoryDetails;
   goodGateway?: CategoryDetails;
   goodObserver?: CategoryDetails;
-  delegatedStakers?: CategoryDetails;
-  customGatewayName?: CategoryDetails;
-  stakedGateways?: CategoryDetails;
+  hasDelegates?: CategoryDetails;
+  customGatewayNote?: CategoryDetails;
+  delegatedStaker?: CategoryDetails;
   ioBalance?: CategoryDetails;
   arDriveBalance?: CategoryDetails;
   arDriveVaults?: CategoryDetails;
@@ -67,6 +67,7 @@ export type Categories = {
   arDriveUserUploads?: CategoryDetails;
   arweaveUserUploads?: CategoryDetails;
   eventAttendee?: CategoryDetails;
+  manifestUploader?: CategoryDetails;
 };
 
 export type CategoryDetails = {
@@ -83,6 +84,7 @@ export type SprintDetails = {
 };
 
 export type FaucetRecipient = {
+  zealyId: string;
   transferTxId: string;
   timestamp: number;
 };

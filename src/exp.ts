@@ -1,12 +1,10 @@
 import { fetchAndSaveIOState } from "./ar-io";
 import {
   DEFAULT_ARNS_DATA_POINTER,
-  HISTORICAL_ARDRIVE_EXP_RATIO,
-  HISTORICAL_BASIC_ARDRIVE_TOKEN_REWARD,
   HISTORICAL_BASIC_DELEGATES_REWARD,
   HISTORICAL_BASIC_NAME_REWARD,
   HISTORICAL_BASIC_STAKED_GATEWAYS_REWARD,
-  HISTORICAL_UNDERNAME_REWARD,
+  HISTORICAL_MULTIPLE_UNDERNAME_REWARD,
   HISTORICAL_CONTROLLER_REWARD,
   HISTORICAL_GOOD_GATEWAY_REWARD,
   HISTORICAL_GOOD_OBSERVER_REWARD,
@@ -32,6 +30,8 @@ import {
   HISTORICAL_MEDIUM_ARWEAVE_UPLOAD_REWARD,
   HISTORICAL_SMALL_ARWEAVE_UPLOAD_REWARD,
   HISTORICAL_EVENT_ATTENDEE_REWARD,
+  HISTORICAL_ARDRIVE_TOKEN_REWARD,
+  HISTORICAL_MANIFEST_UPLOAD_REWARD,
 } from "./constants";
 import {
   Balances,
@@ -62,7 +62,8 @@ export function calculateHistoricalExp(
   exemptWallets: Balances,
   arDriveUploaders: Balances,
   arweaveUploaders: Balances,
-  eventAttendees: Balances
+  eventAttendees: Balances,
+  manifestUploaders: Balances
 ): HistoricalScores {
   const scores: HistoricalScores = {};
 
@@ -124,14 +125,14 @@ export function calculateHistoricalExp(
     // Points for having multiple undernames
     if (
       Object.keys(record.contract.records).length > 1 &&
-      !scores[owner].categories.basicUndername
+      !scores[owner].categories.multipleUndernames
     ) {
       for (const undername in record.contract.records) {
         if (undername !== "@") {
-          scores[owner].totalPoints += HISTORICAL_UNDERNAME_REWARD;
-          scores[owner].categories.basicUndername = {
+          scores[owner].totalPoints += HISTORICAL_MULTIPLE_UNDERNAME_REWARD;
+          scores[owner].categories.multipleUndernames = {
             value: `${undername}_${key}`,
-            exp: HISTORICAL_UNDERNAME_REWARD,
+            exp: HISTORICAL_MULTIPLE_UNDERNAME_REWARD,
             awardedOnSprint: 0,
           };
           break;
@@ -238,7 +239,7 @@ export function calculateHistoricalExp(
 
     // Points for having delegates
     if (
-      !scores[owner].categories.delegatedStakers &&
+      !scores[owner].categories.hasDelegates &&
       Object.keys(gateway.delegates).length > 0
     ) {
       let delegatedStakeReward = 0;
@@ -248,7 +249,7 @@ export function calculateHistoricalExp(
         delegatedStakeReward = HISTORICAL_BASIC_DELEGATES_REWARD;
       }
       scores[owner].totalPoints += delegatedStakeReward;
-      scores[owner].categories.delegatedStakers = {
+      scores[owner].categories.hasDelegates = {
         value: fqdn,
         exp: delegatedStakeReward,
         awardedOnSprint: 0,
@@ -257,11 +258,11 @@ export function calculateHistoricalExp(
 
     // Points for customizing gateway note
     if (
-      !scores[owner].categories.customGatewayName &&
+      !scores[owner].categories.customGatewayNote &&
       gateway.settings.note === "Owned and operated by DTF."
     ) {
       scores[owner].totalPoints += HISTORICAL_CUSTOM_GATEWAY_NOTE_REWARD;
-      scores[owner].categories.delegatedStakers = {
+      scores[owner].categories.customGatewayNote = {
         value: fqdn,
         exp: HISTORICAL_CUSTOM_GATEWAY_NOTE_REWARD,
         awardedOnSprint: 0,
@@ -280,24 +281,25 @@ export function calculateHistoricalExp(
         };
       }
 
-      if (scores[delegate].categories.stakedGateways) {
-        if (Number(scores[delegate].categories.stakedGateways.value) === 5) {
+      if (scores[delegate].categories.delegatedStaker) {
+        if (Number(scores[delegate].categories.delegatedStaker.value) === 5) {
           scores[delegate].totalPoints +=
             HISTORICAL_BASIC_STAKED_GATEWAYS_REWARD;
-          scores[delegate].categories.stakedGateways = {
-            value: Number(scores[delegate].categories.stakedGateways.value) + 1,
+          scores[delegate].categories.delegatedStaker = {
+            value:
+              Number(scores[delegate].categories.delegatedStaker.value) + 1,
             exp:
               HISTORICAL_BASIC_STAKED_GATEWAYS_REWARD +
               HISTORICAL_MANY_STAKED_GATEWAYS_REWARD,
             awardedOnSprint: 0,
           };
         } else {
-          scores[delegate].categories.stakedGateways.value =
-            Number(scores[delegate].categories.stakedGateways.value) + 1;
+          scores[delegate].categories.delegatedStaker.value =
+            Number(scores[delegate].categories.delegatedStaker.value) + 1;
         }
       } else {
         scores[delegate].totalPoints += HISTORICAL_BASIC_STAKED_GATEWAYS_REWARD;
-        scores[delegate].categories.stakedGateways = {
+        scores[delegate].categories.delegatedStaker = {
           value: 1,
           exp: HISTORICAL_BASIC_STAKED_GATEWAYS_REWARD,
           awardedOnSprint: 0,
@@ -338,18 +340,11 @@ export function calculateHistoricalExp(
       };
     }
     if (!scores[owner].categories.arDriveBalance) {
-      let arDriveExp = 0;
       if (arDriveState.balances[owner] !== 0) {
-        arDriveExp =
-          (HISTORICAL_BASIC_ARDRIVE_TOKEN_REWARD +
-            Math.floor(
-              arDriveState.balances[owner] / HISTORICAL_ARDRIVE_EXP_RATIO
-            )) |
-          HISTORICAL_BASIC_ARDRIVE_TOKEN_REWARD;
-        scores[owner].totalPoints += arDriveExp;
+        scores[owner].totalPoints += HISTORICAL_ARDRIVE_TOKEN_REWARD;
         scores[owner].categories.arDriveBalance = {
           value: arDriveState.balances[owner],
-          exp: arDriveExp,
+          exp: HISTORICAL_ARDRIVE_TOKEN_REWARD,
           awardedOnSprint: 0,
         };
       }
@@ -367,20 +362,17 @@ export function calculateHistoricalExp(
         categories: {},
       };
     }
-    if (!scores[owner].categories.arDriveVaults) {
+    if (!scores[owner].categories.arDriveBalance) {
       // Add up all vaults
       let vaultBalance = arDriveState.vault[owner].reduce(
         (total: number, vault: any) => total + vault.balance,
         0
       );
       if (vaultBalance !== 0) {
-        let arDriveExp = Math.floor(
-          vaultBalance / HISTORICAL_ARDRIVE_EXP_RATIO
-        );
-        scores[owner].totalPoints += arDriveExp;
+        scores[owner].totalPoints += HISTORICAL_ARDRIVE_TOKEN_REWARD;
         scores[owner].categories.arDriveVaults = {
           value: vaultBalance,
-          exp: arDriveExp,
+          exp: HISTORICAL_ARDRIVE_TOKEN_REWARD,
           awardedOnSprint: 0,
         };
       }
@@ -586,6 +578,31 @@ export function calculateHistoricalExp(
     }
   }
 
+  // Points for having uploaded manifests to arweave
+  for (const owner in manifestUploaders) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+
+    if (
+      !scores[owner].categories.manifestUploader &&
+      manifestUploaders[owner] >= 5_000_000
+    ) {
+      scores[owner].totalPoints += HISTORICAL_MANIFEST_UPLOAD_REWARD;
+      scores[owner].categories.manifestUploader = {
+        value: manifestUploaders[owner],
+        exp: HISTORICAL_MANIFEST_UPLOAD_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
+
   // Points for attending an event
   for (const owner in eventAttendees) {
     // Initialize the score detail if not already
@@ -638,6 +655,7 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
   let arDriveUsersSnapshot: any = {};
   let arweaveUsersSnapshot: any = {};
   let eventAttendeesSnapshot: any = {};
+  let manifestUploaderSnapshot: any = {};
 
   if (blockHeight) {
     const ioStatePath = path.join(
@@ -706,6 +724,12 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       "data",
       `event_attendees.json` // TO DO: SET THIS TO BE DYNAMIC
     );
+    const manifestUploaderSnapshotPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      `arweave_manifest_uploaders_1415082.json` // TO DO: SET THIS TO BE DYNAMIC
+    );
 
     try {
       ioState = await loadJsonFile(ioStatePath);
@@ -719,6 +743,9 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       arDriveUsersSnapshot = await loadJsonFile(arDriveUsersSnapshotPath);
       arweaveUsersSnapshot = await loadJsonFile(arweaveUsersSnapshotPath);
       eventAttendeesSnapshot = await loadJsonFile(eventAttendeesSnapshotPath);
+      manifestUploaderSnapshot = await loadJsonFile(
+        manifestUploaderSnapshotPath
+      );
     } catch (err) {
       console.log(err);
       console.log(
@@ -750,7 +777,8 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       exemptWalletSnapshot.balances,
       arDriveUsersSnapshot.uploads,
       arweaveUsersSnapshot.uploads,
-      eventAttendeesSnapshot.attendees
+      eventAttendeesSnapshot.attendees,
+      manifestUploaderSnapshot.manifestUploaders
     );
     const fileName = "historical-exp-rewards-" + blockHeight + ".json";
     saveJsonToFile(scores, fileName);
@@ -772,7 +800,7 @@ function analyzeScores(data: HistoricalScores): void {
   const allCategories: (keyof Categories)[] = [
     "basicName",
     "ogName",
-    "basicUndername",
+    "multipleUndernames",
     "rootDataPointerSet",
     "undernameDataPointerSet",
     "controllersAdded",
@@ -781,9 +809,9 @@ function analyzeScores(data: HistoricalScores): void {
     "joinedGateway",
     "goodGateway",
     "goodObserver",
-    "delegatedStakers",
-    "customGatewayName",
-    "stakedGateways",
+    "hasDelegates",
+    "customGatewayNote",
+    "delegatedStaker",
     "ioBalance",
     "arDriveBalance",
     "arDriveVaults",
@@ -792,6 +820,7 @@ function analyzeScores(data: HistoricalScores): void {
     "turbo1GBUploadSnapshot",
     "arDriveUserUploads",
     "arweaveUserUploads",
+    "manifestUploader",
     "eventAttendee",
   ];
 

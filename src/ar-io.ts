@@ -101,7 +101,7 @@ export async function enrichRecords(cacheUrl: string, records: CachedRecords) {
 export async function verifyNameQuests(owner: string, enrichedRecords: any) {
   let basicName: string;
   let rootDataPointerSet: string;
-  let basicUndername: string;
+  let multipleUndernames: string;
   let undernameDataPointerSet: string;
   for (const record in enrichedRecords) {
     if (
@@ -131,14 +131,14 @@ export async function verifyNameQuests(owner: string, enrichedRecords: any) {
             enrichedRecords[record].contract.records[undername]
               .transactionId === DEFAULT_ARNS_DATA_POINTER
           ) {
-            basicUndername = undername; // do not break in case we want to check if other undernames have the data pointer set
+            multipleUndernames = undername; // do not break in case we want to check if other undernames have the data pointer set
           } else if (
             undername !== "@" &&
             isArweaveAddress(
               enrichedRecords[record].contract.records[undername].transactionId
             )
           ) {
-            basicUndername = undername;
+            multipleUndernames = undername;
             undernameDataPointerSet =
               enrichedRecords[record].contract.records[undername].transactionId;
             break;
@@ -150,7 +150,7 @@ export async function verifyNameQuests(owner: string, enrichedRecords: any) {
   return {
     basicName,
     rootDataPointerSet,
-    basicUndername,
+    multipleUndernames,
     undernameDataPointerSet,
   };
 }

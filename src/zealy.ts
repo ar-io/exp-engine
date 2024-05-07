@@ -83,9 +83,19 @@ export async function runZealyFaucet(
           `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
         );
         // check if user has already received airdrop
+        let receivedAirdrop = false;
         if (faucetRecipients[arweaveAddress]) {
-          console.log("- Faucet reward already sent");
-        } else {
+          receivedAirdrop = true;
+        }
+
+        for (const key in faucetRecipients) {
+          if (faucetRecipients[key].zealyId === zealyUser.id) {
+            receivedAirdrop = true;
+            continue;
+          }
+        }
+
+        if (!receivedAirdrop) {
           console.log("- Sending Faucet reward");
           const transferTxId = await transferTestTokens(
             arweaveAddress,
@@ -93,12 +103,15 @@ export async function runZealyFaucet(
             dryRun
           );
           faucetRecipients[arweaveAddress] = {
+            zealyId: zealyUser.id,
             transferTxId,
             timestamp: Math.floor(Date.now() / 1000),
           };
           newFaucetRecipients[arweaveAddress] =
             faucetRecipients[arweaveAddress];
           saveJsonToFile(faucetRecipients, "faucet-recipients.json");
+        } else {
+          console.log("- Faucet reward already sent");
         }
       } else {
         console.log(
@@ -109,7 +122,6 @@ export async function runZealyFaucet(
       console.log(`${zealyUser.id} is not eligible for faucet reward`);
     }
   }
-
   return newFaucetRecipients;
 }
 
@@ -169,6 +181,7 @@ export async function runZealyAirdrop(
         };
       }
 
+      // TODO: ensure user cannot "double dip" with different wallet and same zealy id.
       // check if user has already received airdrop for this sprint
       if (
         airdropList.recipients[arweaveAddress] &&
@@ -208,14 +221,15 @@ export async function runZealyAirdrop(
 
         // Check for an undername being created
         if (
-          nameQuestsCompleted.basicUndername &&
-          !airdropList.recipients[arweaveAddress].categories.basicUndername
+          nameQuestsCompleted.multipleUndernames &&
+          !airdropList.recipients[arweaveAddress].categories.multipleUndernames
         ) {
-          airdropList.recipients[arweaveAddress].categories.basicUndername = {
-            value: nameQuestsCompleted.basicUndername,
-            exp: BASIC_UNDERNAME_REWARD,
-            awardedOnSprint: sprintId,
-          };
+          airdropList.recipients[arweaveAddress].categories.multipleUndernames =
+            {
+              value: nameQuestsCompleted.multipleUndernames,
+              exp: BASIC_UNDERNAME_REWARD,
+              awardedOnSprint: sprintId,
+            };
           expToReward += BASIC_UNDERNAME_REWARD;
         }
 
