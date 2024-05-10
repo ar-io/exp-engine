@@ -44,8 +44,10 @@ import {
 import {
   getCurrentBlockHeight,
   isArweaveAddress,
+  jsonToCSV,
   loadJsonFile,
   saveJsonToFile,
+  writeCSVToFile,
 } from "./utilities";
 import path from "path";
 
@@ -782,6 +784,9 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
     );
     const fileName = "historical-exp-rewards-" + blockHeight + ".json";
     saveJsonToFile(scores, fileName);
+
+    const csvData = jsonToCSV(scores);
+    writeCSVToFile(csvData, "historicalScores.csv");
   }
   analyzeScores(scores);
   return { scores, ioState, arDriveState };

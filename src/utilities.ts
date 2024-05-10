@@ -1,6 +1,6 @@
 // Import axios
 import { GATEWAY_URL, keyfile } from "./constants";
-import { JWKInterface } from "./types";
+import { HistoricalScores, JWKInterface } from "./types";
 import axios, { AxiosResponse } from "axios";
 import axiosRetry, { exponentialDelay } from "axios-retry";
 import fs from "fs";
@@ -101,4 +101,37 @@ export function isArweaveAddress(address: string): boolean {
   const trimmedAddress = address.toString().trim();
   const ARWEAVE_TX_REGEX = new RegExp("^[a-zA-Z0-9-_s+]{43}$");
   return ARWEAVE_TX_REGEX.test(trimmedAddress);
+}
+
+export function jsonToCSV(json: HistoricalScores): string {
+  const allCategories = new Set<string>();
+  Object.values(json).forEach((score) => {
+    Object.keys(score.categories).forEach((category) => {
+      allCategories.add(category);
+    });
+  });
+
+  const headers = ["Owner", "Total Points", "Total Names", ...allCategories];
+  let csv = headers.join(",") + "\n";
+
+  for (const owner in json) {
+    const details = json[owner];
+    const row = [
+      owner,
+      details.totalPoints,
+      details.totalNames,
+      ...Array.from(allCategories).map(
+        (category) => details.categories[category]?.exp ?? ""
+      ), // Use optional chaining and nullish coalescing
+    ];
+    csv += row.join(",") + "\n";
+  }
+  return csv;
+}
+
+// Function to write CSV to disk
+export function writeCSVToFile(csvData: string, filename: string) {
+  const filepath = path.join(__dirname, "..", "data", filename);
+  fs.writeFileSync(filepath, csvData);
+  console.log(`CSV file has been saved to ${filepath}`);
 }

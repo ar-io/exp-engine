@@ -44,6 +44,7 @@ export interface HistoricalScores {
 }
 
 export type Categories = {
+  [key: string]: CategoryDetails | undefined; // Added index signature
   basicName?: CategoryDetails;
   ogName?: CategoryDetails;
   multipleUndernames?: CategoryDetails;
