@@ -1,6 +1,6 @@
 // Import axios
 import { GATEWAY_URL, keyfile } from "./constants";
-import { HistoricalScores, JWKInterface } from "./types";
+import { Balances, HistoricalScores, JWKInterface } from "./types";
 import axios, { AxiosResponse } from "axios";
 import axiosRetry, { exponentialDelay } from "axios-retry";
 import fs from "fs";
@@ -58,6 +58,30 @@ export function saveJsonToFile(data: Object, filename: string): void {
   fs.writeFile(dataPath, jsonData, (err) => {
     if (err) {
       console.error("Error writing JSON to file:", err);
+      return;
+    }
+  });
+}
+
+export function saveBalancesToFile(
+  data: HistoricalScores,
+  filename: string
+): void {
+  const balances: Balances = {};
+  for (const key in data) {
+    balances[key] = data[key].totalPoints;
+  }
+
+  // Resolve the path to the directory where the JSON file will be saved
+  const dataPath = path.join(__dirname, "..", "data", filename);
+
+  // Convert the data object to a JSON string
+  const jsonBalancesData = JSON.stringify(balances, null, 2);
+
+  // Write the JSON string to a file in the specified directory
+  fs.writeFile(dataPath, jsonBalancesData, (err) => {
+    if (err) {
+      console.error("Error writing Balances JSON to file:", err);
       return;
     }
   });
@@ -127,6 +151,10 @@ export function jsonToCSV(json: HistoricalScores): string {
     csv += row.join(",") + "\n";
   }
   return csv;
+}
+
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Function to write CSV to disk

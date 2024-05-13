@@ -1,3 +1,4 @@
+import { loadBalances } from "./aoconnect";
 import { fetchAndSaveIOState } from "./ar-io";
 import {
   DEFAULT_ARNS_DATA_POINTER,
@@ -34,6 +35,7 @@ import {
   HISTORICAL_MANIFEST_UPLOAD_REWARD,
 } from "./constants";
 import {
+  AirdropList,
   Balances,
   CachedRecords,
   Categories,
@@ -46,10 +48,106 @@ import {
   isArweaveAddress,
   jsonToCSV,
   loadJsonFile,
+  saveBalancesToFile,
   saveJsonToFile,
   writeCSVToFile,
 } from "./utilities";
 import path from "path";
+
+export async function runHistoricalAirdrop(
+  dryRun: boolean = true,
+  balancesJsonFileName: string
+) {
+  let airdropList: AirdropList;
+  try {
+    const airdropRecipientsFilePath = path.join(
+      __dirname,
+      "..",
+      "data",
+      "airdrop-list.json"
+    );
+    airdropList = await loadJsonFile(airdropRecipientsFilePath);
+  } catch {
+    console.log(
+      "Airdrop Recipients data is missing.  Ensure airdrop-list.json exists"
+    );
+    return {};
+  }
+
+  let balancesList: Balances;
+  try {
+    const airdropRecipientsFilePath = path.join(
+      __dirname,
+      "..",
+      "data",
+      balancesJsonFileName
+    );
+    balancesList = await loadJsonFile(airdropRecipientsFilePath);
+  } catch {
+    console.log(
+      `Balances data is missing.  Ensure ${balancesJsonFileName} exists`
+    );
+    return {};
+  }
+
+  let sprintId = 0;
+  airdropList.lastAirdropTimeStamp = Math.floor(Date.now() / 1000);
+
+  const result = await loadBalances(balancesList, dryRun);
+  if (result === false) {
+    console.log("Error minting EXP");
+    return {};
+  }
+
+  for (const recipient in balancesList) {
+    // if recipient key is not an arweave wallet, skip
+    if (!isArweaveAddress(recipient)) {
+      console.log("Invalid arweave wallet: ", recipient);
+      continue;
+    }
+
+    // Add a new Wallet user if not created in airdrop list already.
+    if (!airdropList.recipients[recipient]) {
+      airdropList.recipients[recipient] = {
+        zealyId: "", // this zealy id can be mapped later if found
+        xpEarned: 0,
+        expRewarded: 0,
+        categories: {},
+        sprintsParticipated: {},
+      };
+    }
+
+    if (
+      airdropList.recipients[recipient] &&
+      airdropList.recipients[recipient].sprintsParticipated[sprintId]
+    ) {
+      console.log("Historical EXP Airdrop already sent for this sprint");
+      continue;
+    }
+
+    const expToReward = balancesList[recipient];
+    if (expToReward > 0) {
+      console.log("- Airdropped EXP");
+      airdropList.recipients[recipient].expRewarded += expToReward;
+      airdropList.recipients[recipient].sprintsParticipated[sprintId] = {
+        transferTxId: result,
+        xpEarned: 0,
+        expRewarded: expToReward,
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+    } else {
+      console.log("- User earned no XP since last sprint. No EXP to airdrop!");
+      airdropList.recipients[recipient].sprintsParticipated[sprintId] = {
+        transferTxId: "",
+        xpEarned: 0,
+        expRewarded: 0,
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+    }
+  }
+  saveJsonToFile(airdropList, "airdrop-list.json");
+  return airdropList;
+}
 
 export function calculateHistoricalExp(
   records: CachedRecords,
@@ -782,8 +880,11 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       eventAttendeesSnapshot.attendees,
       manifestUploaderSnapshot.manifestUploaders
     );
-    const fileName = "historical-exp-rewards-" + blockHeight + ".json";
-    saveJsonToFile(scores, fileName);
+    const jsonFileName = "historical-exp-rewards-" + blockHeight + ".json";
+    saveJsonToFile(scores, jsonFileName);
+
+    const balancesFileName = "exp-balances-" + blockHeight + ".json";
+    saveBalancesToFile(scores, balancesFileName);
 
     const csvData = jsonToCSV(scores);
     writeCSVToFile(csvData, "historicalScores.csv");

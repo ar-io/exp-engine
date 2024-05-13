@@ -15,6 +15,7 @@ import {
   ROOT_DATA_POINTER_SET_REWARD,
   UNDERNAME_DATA_POINTER_SET_REWARD,
   ZEALY_DEV_URL,
+  honeyPotQuestId,
 } from "./constants";
 import { AirdropList, FaucetRecipient } from "./types";
 import {
@@ -45,6 +46,37 @@ export async function getUserInfo(zealyUserId: string, zealyUrl: string) {
     headers: { "x-api-key": devKey },
   });
   return await response.json();
+}
+
+export async function getUserBanStatus(zealyUrl: string) {
+  let currentCursor = "";
+  const zealyBannedUserArray: any[] = [];
+
+  while (true) {
+    const response = await fetch(
+      `${zealyUrl}/reviews?questId=${honeyPotQuestId}&cursor=${currentCursor}`,
+      {
+        method: "GET",
+        headers: { "x-api-key": devKey },
+      }
+    );
+
+    const data: any = await response.json();
+    for (let i = 0; i < data.items.length; i += 1) {
+      if (
+        data.items[i].quest.id === honeyPotQuestId &&
+        data.items[i].status === "success"
+      ) {
+        zealyBannedUserArray.push(data.items[i].user.id);
+      }
+    }
+    if (data.nextCursor !== null) {
+      currentCursor = data.nextCursor;
+    } else {
+      break;
+    }
+  }
+  return zealyBannedUserArray;
 }
 
 export async function runZealyFaucet(
@@ -190,6 +222,7 @@ export async function runZealyAirdrop(
         console.log("EXP Airdrop already sent for this sprint");
       } else if (
         airdropList.recipients[arweaveAddress] &&
+        airdropList.recipients[arweaveAddress].zealyId !== "" &&
         airdropList.recipients[arweaveAddress].zealyId !== zealyUser.id
       ) {
         console.log("This Zealy user is not the initiator of this wallet");

@@ -1,5 +1,8 @@
 export const keyfile = process.env.WALLET_FILE_PATH || "key.json";
-
+export const MINT_DELAY = 50; // 100 ms delay for minting
+export const testExpProcessId = "G3vHz_3XOUAzzVciJCnDf0NLRjbL6bjwRT5mAclrLrk"; // testnet
+export const expProcessId = "aYrCboXVSl1AXL9gPFe3tfRxRf0ZmkOXH65mKT0HHZw"; // mainnet
+export const honeyPotQuestId = "5cdb7119-5407-460c-baa6-c37f225147ea";
 // ECOSYSTEM REWARDS
 export const HISTORICAL_TEST_TOKEN_HOLDER_REWARD = 50;
 export const HISTORICAL_U_REWARD = 50;
