@@ -98,7 +98,7 @@ export async function enrichRecords(cacheUrl: string, records: CachedRecords) {
   return enrichedRecords;
 }
 
-export async function verifyNameQuests(owner: string, enrichedRecords: any) {
+export function verifyNameQuests(owner: string, enrichedRecords: any) {
   let basicName: string;
   let rootDataPointerSet: string;
   let multipleUndernames: string;

@@ -105,6 +105,22 @@ export function loadJsonFile(filePath: string): Promise<any> {
   });
 }
 
+export async function loadCachedZealyUserInfo(): Promise<any> {
+  let zealyUserInfo: any = {};
+  const zealyUserInfoFilePath = path.join(
+    __dirname,
+    "..",
+    "data",
+    `zealy-user-info.json`
+  );
+  try {
+    zealyUserInfo = await loadJsonFile(zealyUserInfoFilePath);
+  } catch (err) {
+    console.log(err);
+  }
+  return zealyUserInfo;
+}
+
 export async function loadJsonStateFile(blockHeight: number): Promise<any> {
   let state: any = {};
   const cacheFilePath = path.join(

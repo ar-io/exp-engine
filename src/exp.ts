@@ -121,13 +121,13 @@ export async function runHistoricalAirdrop(
       airdropList.recipients[recipient] &&
       airdropList.recipients[recipient].sprintsParticipated[sprintId]
     ) {
-      console.log("Historical EXP Airdrop already sent for this sprint");
+      // console.log("Historical EXP Airdrop already sent for this sprint");
       continue;
     }
 
     const expToReward = balancesList[recipient];
     if (expToReward > 0) {
-      console.log("- Airdropped EXP");
+      console.log("- Airdropped Historical EXP - ", recipient);
       airdropList.recipients[recipient].expRewarded += expToReward;
       airdropList.recipients[recipient].sprintsParticipated[sprintId] = {
         transferTxId: result,
@@ -136,7 +136,10 @@ export async function runHistoricalAirdrop(
         timestamp: Math.floor(Date.now() / 1000),
       };
     } else {
-      console.log("- User earned no XP since last sprint. No EXP to airdrop!");
+      console.log(
+        "- User earned no XP since last sprint. No EXP to airdrop - ",
+        recipient
+      );
       airdropList.recipients[recipient].sprintsParticipated[sprintId] = {
         transferTxId: "",
         xpEarned: 0,

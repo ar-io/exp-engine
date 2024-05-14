@@ -3,6 +3,7 @@ export const MINT_DELAY = 50; // 100 ms delay for minting
 export const testExpProcessId = "G3vHz_3XOUAzzVciJCnDf0NLRjbL6bjwRT5mAclrLrk"; // testnet
 export const expProcessId = "aYrCboXVSl1AXL9gPFe3tfRxRf0ZmkOXH65mKT0HHZw"; // mainnet
 export const honeyPotQuestId = "5cdb7119-5407-460c-baa6-c37f225147ea";
+
 // ECOSYSTEM REWARDS
 export const HISTORICAL_TEST_TOKEN_HOLDER_REWARD = 50;
 export const HISTORICAL_U_REWARD = 50;
@@ -61,7 +62,7 @@ export const FAUCET_QUANTITY = 1250;
 export const ZEALY_PROD_URL = ZEALY_URL + "ar-io";
 export const ZEALY_TEST_URL = ZEALY_URL + "theawesomecommunity";
 export const ZEALY_DEV_URL = ZEALY_URL + "theblackfox";
-export const MIN_FAUCET_XP = 100; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
+export const MIN_FAUCET_XP = 300; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
 
 // AR.IO NETWORK
 export const GATEWAY_URL = "https://arweave.net/";

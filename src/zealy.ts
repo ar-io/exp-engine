@@ -1,5 +1,5 @@
-import { mintEXP } from "./aoconnect";
-import { devKey } from "./apikeys";
+import { loadBalances } from "./aoconnect";
+import { devKey, prodKey } from "./apikeys";
 import {
   enrichRecords,
   fetchAndSaveIOState,
@@ -17,11 +17,12 @@ import {
   ZEALY_DEV_URL,
   honeyPotQuestId,
 } from "./constants";
-import { AirdropList, FaucetRecipient } from "./types";
+import { AirdropList, Balances, FaucetRecipient } from "./types";
 import {
   getCurrentBlockHeight,
   isArweaveAddress,
   loadJsonFile,
+  loadCachedZealyUserInfo,
   saveJsonToFile,
 } from "./utilities";
 import path from "path";
@@ -29,26 +30,28 @@ import path from "path";
 export async function getLeaderboard(zealyUrl: string) {
   let totalPages = 1;
   let currentPage = 0;
-  const zealyUserArray: any[] = [];
+  let zealyUserInfo = await loadCachedZealyUserInfo();
   while (currentPage <= totalPages) {
     currentPage += 1;
     const response = await fetch(
-      `${zealyUrl}/leaderboard?${currentPage}?limit=500`,
+      `${zealyUrl}/leaderboard?page=${currentPage}&limit=500`,
       {
         method: "GET",
         headers: { "x-api-key": devKey },
       }
     );
     const data: any = await response.json();
-
     for (let i = 0; i < data.data.length; i += 1) {
-      const userData: any = await getUserInfo(data.data[i].userId, zealyUrl);
-      zealyUserArray.push(userData);
+      if (!zealyUserInfo[data.data[i].userId]) {
+        console.log("User not found in local cache: ", data.data[i].userId);
+        const userData: any = await getUserInfo(data.data[i].userId, zealyUrl);
+        zealyUserInfo[data.data[i].userId] = userData;
+      }
     }
     totalPages = data.totalPages;
   }
-  console.log(zealyUserArray.length);
-  return zealyUserArray;
+  saveJsonToFile(zealyUserInfo, `zealy-user-info.json`);
+  return zealyUserInfo;
 }
 
 export async function getUserInfo(zealyUserId: string, zealyUrl: string) {
@@ -59,7 +62,7 @@ export async function getUserInfo(zealyUserId: string, zealyUrl: string) {
   return await response.json();
 }
 
-export async function getUserBanStatus(zealyUrl: string) {
+export async function getHoneyPotUsers(zealyUrl: string) {
   let currentCursor = "";
   const zealyBannedUserArray: any[] = [];
 
@@ -90,6 +93,45 @@ export async function getUserBanStatus(zealyUrl: string) {
   return zealyBannedUserArray;
 }
 
+export async function banZealyUsers(zealyUrl: string, dryRun: boolean = true) {
+  const zealyUsersToBan = await getHoneyPotUsers(zealyUrl);
+  const bannedZealyUsers: string[] = [];
+
+  let zealyUserInfo = await loadCachedZealyUserInfo();
+  for (const bannedZealyUser of zealyUsersToBan) {
+    if (dryRun === false) {
+      console.log(`Banning: ${bannedZealyUser}`);
+      try {
+        await fetch(`${zealyUrl}/users/${bannedZealyUser}/ban`, {
+          method: "POST",
+          headers: { "x-api-key": prodKey, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reason: "Banned for eating the honey",
+          }),
+        });
+        if (zealyUserInfo[bannedZealyUser]) {
+          console.log(
+            "Updating cached Zealy user status for: ",
+            bannedZealyUser
+          );
+          zealyUserInfo[bannedZealyUser].isBanned = true;
+        }
+        bannedZealyUsers.push(bannedZealyUser);
+      } catch (err) {
+        console.log(err);
+      }
+    } else {
+      console.log(`Dry Run Banning: ${bannedZealyUser}`);
+      bannedZealyUsers.push(bannedZealyUser);
+    }
+  }
+
+  if (!dryRun) {
+    saveJsonToFile(zealyUserInfo, `zealy-user-info.json`);
+  }
+  return bannedZealyUsers;
+}
+
 export async function runZealyFaucet(
   dryRun?: boolean,
   zealyUrl: string = ZEALY_DEV_URL
@@ -114,9 +156,9 @@ export async function runZealyFaucet(
     return {};
   }
 
-  for (let i = 0; i < zealyUsers.length; i += 1) {
-    const zealyUser: any = zealyUsers[i];
-    if (zealyUser.xp >= MIN_FAUCET_XP) {
+  for (const zealyId in zealyUsers) {
+    const zealyUser: any = zealyUsers[zealyId];
+    if (zealyUser.xp >= MIN_FAUCET_XP && zealyUser.isBanned === false) {
       if (
         zealyUser.unVerifiedBlockchainAddresses.arweave &&
         isArweaveAddress(zealyUser.unVerifiedBlockchainAddresses.arweave)
@@ -132,7 +174,7 @@ export async function runZealyFaucet(
         }
 
         for (const key in faucetRecipients) {
-          if (faucetRecipients[key].zealyId === zealyUser.id) {
+          if (faucetRecipients[key].zealyId === zealyId) {
             receivedAirdrop = true;
             continue;
           }
@@ -146,7 +188,7 @@ export async function runZealyFaucet(
             dryRun
           );
           faucetRecipients[arweaveAddress] = {
-            zealyId: zealyUser.id,
+            zealyId: zealyId,
             transferTxId,
             timestamp: Math.floor(Date.now() / 1000),
           };
@@ -157,14 +199,15 @@ export async function runZealyFaucet(
           // console.log("- Faucet reward already sent");
         }
       } else {
-        console.log(
-          `UserId: ${zealyUser.id} Arweave Wallet: (empty)... skipping`
-        );
+        console.log(`UserId: ${zealyId} Arweave Wallet: (empty)... skipping`);
       }
     } else {
       // console.log(`${zealyUser.id} is not eligible for faucet reward`);
     }
   }
+  console.log(
+    `Airdropped tIO to ${Object.keys(newFaucetRecipients).length} users`
+  );
   return newFaucetRecipients;
 }
 
@@ -173,6 +216,8 @@ export async function runZealyAirdrop(
   enrichedCache?: any,
   zealyUrl: string = ZEALY_DEV_URL
 ) {
+  console.log("Running Zealy EXP Airdrop");
+  let balancesList: Balances = {};
   const zealyUsers: any = await getLeaderboard(zealyUrl);
 
   let airdropList: AirdropList;
@@ -205,8 +250,8 @@ export async function runZealyAirdrop(
     enrichedCache.records = await enrichRecords(CACHE_URL, state.records);
   }
 
-  for (let i = 0; i < zealyUsers.length; i += 1) {
-    const zealyUser: any = zealyUsers[i];
+  for (const zealyId in zealyUsers) {
+    const zealyUser: any = zealyUsers[zealyId];
     if (zealyUser.unVerifiedBlockchainAddresses.arweave) {
       const arweaveAddress = zealyUser.unVerifiedBlockchainAddresses.arweave;
       //console.log(
@@ -216,7 +261,7 @@ export async function runZealyAirdrop(
       // Add a new Wallet user if not created in airdrop list already.
       if (!airdropList.recipients[arweaveAddress]) {
         airdropList.recipients[arweaveAddress] = {
-          zealyId: zealyUser.id,
+          zealyId: zealyId,
           xpEarned: 0,
           expRewarded: 0,
           categories: {},
@@ -224,28 +269,27 @@ export async function runZealyAirdrop(
         };
       }
 
-      // TODO: ensure user cannot "double dip" with different wallet and same zealy id.
       // check if user has already received airdrop for this sprint
       if (
         airdropList.recipients[arweaveAddress] &&
         airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId]
       ) {
-        console.log("EXP Airdrop already sent for this sprint");
+        console.log(
+          `Zealy EXP Airdrop already sent to ${arweaveAddress} for this sprint ${sprintId}`
+        );
       } else if (
         airdropList.recipients[arweaveAddress] &&
         airdropList.recipients[arweaveAddress].zealyId !== "" &&
-        airdropList.recipients[arweaveAddress].zealyId !== zealyUser.id
+        airdropList.recipients[arweaveAddress].zealyId !== zealyId
       ) {
         console.log("This Zealy user is not the initiator of this wallet");
+      } else if (zealyUsers[zealyId] && zealyUsers[zealyId].isBanned === true) {
+        console.log(`This Zealy user is banned: `, zealyId);
       } else {
         // This must be a new sprint
-
-        //console.log(
-        //  "- This Zealy user has not participated in this sprint yet"
-        //);
         // Verify and reward on chain actions
         let expToReward = 0;
-        const nameQuestsCompleted = await verifyNameQuests(
+        const nameQuestsCompleted = verifyNameQuests(
           arweaveAddress,
           enrichedCache.records
         );
@@ -314,17 +358,17 @@ export async function runZealyAirdrop(
         expToReward += currentSprintXp; // 1 XP = 1 EXP
         airdropList.recipients[arweaveAddress].expRewarded += expToReward;
         airdropList.recipients[arweaveAddress].xpEarned = zealyUser.xp;
+        airdropList.recipients[arweaveAddress].zealyId = zealyId;
 
         if (expToReward > 0) {
-          // console.log("- Airdropping EXP");
-          const result = await mintEXP(arweaveAddress, expToReward, dryRun);
           airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId] =
             {
-              transferTxId: result,
+              transferTxId: "",
               xpEarned: currentSprintXp,
               expRewarded: expToReward,
               timestamp: Math.floor(Date.now() / 1000),
             };
+          balancesList[arweaveAddress] = expToReward;
         } else {
           // console.log(
           //   "- User earned no XP since last sprint. No EXP to airdrop!"
@@ -337,14 +381,30 @@ export async function runZealyAirdrop(
               timestamp: Math.floor(Date.now() / 1000),
             };
         }
-        saveJsonToFile(airdropList, "airdrop-list.json");
       }
     } else {
-      console.log(
-        `UserId: ${zealyUser.id} Arweave Wallet: (empty)... skipping`
-      );
+      console.log(`UserId: ${zealyId} Arweave Wallet: (empty)... skipping`);
     }
   }
+
+  saveJsonToFile(airdropList, "airdrop-list.json");
+
+  // Perform the airdrop
+  const result = await loadBalances(balancesList, dryRun);
+
+  // Update the airdroplist
+  for (const recipient in airdropList.recipients) {
+    if (
+      airdropList.recipients[recipient].sprintsParticipated[sprintId] &&
+      airdropList.recipients[recipient].sprintsParticipated[sprintId]
+        .expRewarded > 0
+    ) {
+      airdropList.recipients[recipient].sprintsParticipated[
+        sprintId
+      ].transferTxId = result;
+    }
+  }
+
   // Save any last changes to the .json file
   saveJsonToFile(airdropList, "airdrop-list.json");
   return airdropList;

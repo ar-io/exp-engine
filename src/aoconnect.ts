@@ -64,6 +64,7 @@ export async function mintEXP(
 }
 
 export async function loadBalances(balances: Balances, dryRun?: boolean) {
+  console.log(`Loading ${Object.keys(balances).length} balances`);
   try {
     if (dryRun) {
       await delay(MINT_DELAY);
