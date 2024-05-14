@@ -27,16 +27,27 @@ import {
 import path from "path";
 
 export async function getLeaderboard(zealyUrl: string) {
-  const response = await fetch(`${zealyUrl}/leaderboard`, {
-    method: "GET",
-    headers: { "x-api-key": devKey },
-  });
-  const data: any = await response.json();
+  let totalPages = 1;
+  let currentPage = 0;
   const zealyUserArray: any[] = [];
-  for (let i = 0; i < data.data.length; i += 1) {
-    const userData: any = await getUserInfo(data.data[i].userId, zealyUrl);
-    zealyUserArray.push(userData);
+  while (currentPage <= totalPages) {
+    currentPage += 1;
+    const response = await fetch(
+      `${zealyUrl}/leaderboard?${currentPage}?limit=500`,
+      {
+        method: "GET",
+        headers: { "x-api-key": devKey },
+      }
+    );
+    const data: any = await response.json();
+
+    for (let i = 0; i < data.data.length; i += 1) {
+      const userData: any = await getUserInfo(data.data[i].userId, zealyUrl);
+      zealyUserArray.push(userData);
+    }
+    totalPages = data.totalPages;
   }
+  console.log(zealyUserArray.length);
   return zealyUserArray;
 }
 
@@ -111,9 +122,9 @@ export async function runZealyFaucet(
         isArweaveAddress(zealyUser.unVerifiedBlockchainAddresses.arweave)
       ) {
         const arweaveAddress = zealyUser.unVerifiedBlockchainAddresses.arweave;
-        console.log(
-          `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
-        );
+        //console.log(
+        //  `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
+        //);
         // check if user has already received airdrop
         let receivedAirdrop = false;
         if (faucetRecipients[arweaveAddress]) {
@@ -128,7 +139,7 @@ export async function runZealyFaucet(
         }
 
         if (!receivedAirdrop) {
-          console.log("- Sending Faucet reward");
+          //console.log("- Sending Faucet reward");
           const transferTxId = await transferTestTokens(
             arweaveAddress,
             FAUCET_QUANTITY,
@@ -143,7 +154,7 @@ export async function runZealyFaucet(
             faucetRecipients[arweaveAddress];
           saveJsonToFile(faucetRecipients, "faucet-recipients.json");
         } else {
-          console.log("- Faucet reward already sent");
+          // console.log("- Faucet reward already sent");
         }
       } else {
         console.log(
@@ -151,7 +162,7 @@ export async function runZealyFaucet(
         );
       }
     } else {
-      console.log(`${zealyUser.id} is not eligible for faucet reward`);
+      // console.log(`${zealyUser.id} is not eligible for faucet reward`);
     }
   }
   return newFaucetRecipients;
@@ -198,9 +209,9 @@ export async function runZealyAirdrop(
     const zealyUser: any = zealyUsers[i];
     if (zealyUser.unVerifiedBlockchainAddresses.arweave) {
       const arweaveAddress = zealyUser.unVerifiedBlockchainAddresses.arweave;
-      console.log(
-        `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
-      );
+      //console.log(
+      //  `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
+      //);
 
       // Add a new Wallet user if not created in airdrop list already.
       if (!airdropList.recipients[arweaveAddress]) {
@@ -229,9 +240,9 @@ export async function runZealyAirdrop(
       } else {
         // This must be a new sprint
 
-        console.log(
-          "- This Zealy user has not participated in this sprint yet"
-        );
+        //console.log(
+        //  "- This Zealy user has not participated in this sprint yet"
+        //);
         // Verify and reward on chain actions
         let expToReward = 0;
         const nameQuestsCompleted = await verifyNameQuests(
@@ -305,7 +316,7 @@ export async function runZealyAirdrop(
         airdropList.recipients[arweaveAddress].xpEarned = zealyUser.xp;
 
         if (expToReward > 0) {
-          console.log("- Airdropping EXP");
+          // console.log("- Airdropping EXP");
           const result = await mintEXP(arweaveAddress, expToReward, dryRun);
           airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId] =
             {
@@ -315,9 +326,9 @@ export async function runZealyAirdrop(
               timestamp: Math.floor(Date.now() / 1000),
             };
         } else {
-          console.log(
-            "- User earned no XP since last sprint. No EXP to airdrop!"
-          );
+          // console.log(
+          //   "- User earned no XP since last sprint. No EXP to airdrop!"
+          // );
           airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId] =
             {
               transferTxId: "",
