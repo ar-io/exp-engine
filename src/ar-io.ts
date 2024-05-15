@@ -43,11 +43,6 @@ export async function transferTestTokens(
   }
 }
 
-interface CacheResponse {
-  contractTxId: string;
-  state: any;
-}
-
 // Function to fetch data from ARNS cache with error handling
 export async function fetchCache(url: string): Promise<any> {
   try {
@@ -60,7 +55,7 @@ export async function fetchCache(url: string): Promise<any> {
 }
 
 // Function to fetch data from ARNS cache with error handling
-export async function getState(blockHeight?: number): Promise<any> {
+export async function getState(blockHeight: number = 1415568): Promise<any> {
   try {
     if (blockHeight) {
       blockHeight = await getCurrentBlockHeight();
@@ -68,7 +63,7 @@ export async function getState(blockHeight?: number): Promise<any> {
 
     const contract = ArIO.init();
     const stateAtHeight = await contract.getState({
-      evaluationOptions: { evalTo: { blockHeight: 1415568 } },
+      evaluationOptions: { evalTo: { blockHeight } },
     });
     return stateAtHeight;
   } catch (error) {
@@ -87,7 +82,7 @@ export async function enrichRecords(cacheUrl: string, records: CachedRecords) {
       enrichedRecords[recordId] = record;
       enrichedRecords[recordId].contract = contractData.state;
       console.log(
-        `Enriched reocrd ${recordId} with ticker ${contractData.state.ticker}`
+        `Enriched record ${recordId} with ticker ${contractData.state.ticker}`
       );
     } else {
       console.log(
@@ -155,27 +150,10 @@ export function verifyNameQuests(owner: string, enrichedRecords: any) {
   };
 }
 
-export async function fetchAndSaveCache() {
-  try {
-    const data: CacheResponse = await fetchCache(`${CACHE_URL}/${CONTRACT_ID}`);
-    const enrichedRecords = await enrichRecords(CACHE_URL, data.state.records);
-    data.state.records = enrichedRecords;
-
-    const fileName = "ar-io-state-" + data.state.lastTickedHeight + ".json";
-    saveJsonToFile(data, fileName);
-    console.log(
-      `AR.IO Contract state data has been fetched and saved as ${fileName}, with skipped records where data could not be enriched.`
-    );
-    return data;
-  } catch (err) {
-    console.log(err);
-    return false;
-  }
-}
-
-export async function fetchAndSaveIOState(blockHeight: number) {
+export async function fetchSaveAndEnrichIOState(blockHeight: number) {
   try {
     const state = await getState(blockHeight);
+    console.log("Got state");
     const enrichedRecords = await enrichRecords(CACHE_URL, state.records);
     state.records = enrichedRecords;
 

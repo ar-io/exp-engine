@@ -54,15 +54,15 @@ export const ROOT_DATA_POINTER_SET_REWARD = 100;
 export const UNDERNAME_DATA_POINTER_SET_REWARD = 100;
 export const DEFAULT_ARNS_DATA_POINTER =
   "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk";
-export const ZEALY_START_TIMESTAMP = 1711954647;
+export const ZEALY_START_TIMESTAMP = 1715779982;
 
 // ZEALY
 export const ZEALY_URL = "https://api-v2.zealy.io/public/communities/";
-export const FAUCET_QUANTITY = 1250;
+export const FAUCET_QUANTITY = 1500;
 export const ZEALY_PROD_URL = ZEALY_URL + "ar-io";
 export const ZEALY_TEST_URL = ZEALY_URL + "theawesomecommunity";
 export const ZEALY_DEV_URL = ZEALY_URL + "theblackfox";
-export const MIN_FAUCET_XP = 300; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
+export const MIN_FAUCET_XP = 5000; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
 
 // AR.IO NETWORK
 export const GATEWAY_URL = "https://arweave.net/";

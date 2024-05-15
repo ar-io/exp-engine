@@ -1,9 +1,9 @@
 import { ZEALY_PROD_URL } from "./constants";
-import { runFaucetCron, runAirdropCron } from "./cron";
+import { runAirdropCron } from "./cron";
 
 async function main() {
-  await runFaucetCron(false, ZEALY_PROD_URL);
-  await runAirdropCron(false, ZEALY_PROD_URL);
+  // await runFaucetCron(true, ZEALY_PROD_URL);
+  await runAirdropCron(true, ZEALY_PROD_URL);
 }
 
 main().catch(console.error);

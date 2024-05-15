@@ -55,12 +55,12 @@ export function saveJsonToFile(data: Object, filename: string): void {
   const jsonData = JSON.stringify(data, null, 2);
 
   // Write the JSON string to a file in the specified directory
-  fs.writeFile(dataPath, jsonData, (err) => {
-    if (err) {
-      console.error("Error writing JSON to file:", err);
-      return;
-    }
-  });
+  try {
+    fs.writeFileSync(dataPath, jsonData); // Use writeFileSync instead of writeFile
+    console.log("File successfully written to:", dataPath);
+  } catch (err) {
+    console.error("Error writing JSON to file:", err);
+  }
 }
 
 export function saveBalancesToFile(
@@ -111,7 +111,7 @@ export async function loadCachedZealyUserInfo(): Promise<any> {
     __dirname,
     "..",
     "data",
-    `zealy-user-info.json`
+    "zealy-user-info.json"
   );
   try {
     zealyUserInfo = await loadJsonFile(zealyUserInfoFilePath);
@@ -119,6 +119,22 @@ export async function loadCachedZealyUserInfo(): Promise<any> {
     console.log(err);
   }
   return zealyUserInfo;
+}
+
+export async function loadCachedBannedZealyUsers(): Promise<any> {
+  let bannedZealyUsers: any = {};
+  const bannedZealyUsersFilePath = path.join(
+    __dirname,
+    "..",
+    "data",
+    `banned-zealy-users.json`
+  );
+  try {
+    bannedZealyUsers = await loadJsonFile(bannedZealyUsersFilePath);
+  } catch (err) {
+    console.log(err);
+  }
+  return bannedZealyUsers;
 }
 
 export async function loadJsonStateFile(blockHeight: number): Promise<any> {

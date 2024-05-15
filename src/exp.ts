@@ -1,5 +1,5 @@
 import { loadBalances } from "./aoconnect";
-import { fetchAndSaveIOState } from "./ar-io";
+import { fetchSaveAndEnrichIOState } from "./ar-io";
 import {
   DEFAULT_ARNS_DATA_POINTER,
   HISTORICAL_BASIC_DELEGATES_REWARD,
@@ -854,14 +854,14 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       console.log(
         `Fetching and saving the ar.io cache at block height ${blockHeight}`
       );
-      ioState = await fetchAndSaveIOState(blockHeight);
+      ioState = await fetchSaveAndEnrichIOState(blockHeight);
     }
   } else {
     console.log(
       "Fetching and saving the latest ar.io cache at current block height"
     );
     blockHeight = await getCurrentBlockHeight();
-    ioState = await fetchAndSaveIOState(blockHeight);
+    ioState = await fetchSaveAndEnrichIOState(blockHeight);
   }
 
   let scores = {};

@@ -1,15 +1,13 @@
 import { loadBalances } from "./aoconnect";
 import { devKey, prodKey } from "./apikeys";
 import {
-  enrichRecords,
-  fetchAndSaveIOState,
+  fetchSaveAndEnrichIOState,
   transferTestTokens,
   verifyNameQuests,
 } from "./ar-io";
 import {
   BASIC_NAME_REWARD,
   BASIC_UNDERNAME_REWARD,
-  CACHE_URL,
   FAUCET_QUANTITY,
   MIN_FAUCET_XP,
   ROOT_DATA_POINTER_SET_REWARD,
@@ -24,10 +22,12 @@ import {
   loadJsonFile,
   loadCachedZealyUserInfo,
   saveJsonToFile,
+  loadCachedBannedZealyUsers,
 } from "./utilities";
 import path from "path";
 
 export async function getLeaderboard(zealyUrl: string) {
+  console.log("Getting Zealy Leaderboard from", zealyUrl);
   let totalPages = 1;
   let currentPage = 0;
   let zealyUserInfo = await loadCachedZealyUserInfo();
@@ -93,22 +93,35 @@ export async function getHoneyPotUsers(zealyUrl: string) {
   return zealyBannedUserArray;
 }
 
-export async function banZealyUsers(zealyUrl: string, dryRun: boolean = true) {
+export async function banZealyUsers(dryRun: boolean = true, zealyUrl: string) {
+  const banReason = "Banned for eating the honey";
   const zealyUsersToBan = await getHoneyPotUsers(zealyUrl);
-  const bannedZealyUsers: string[] = [];
+  console.log("Got honey pot users");
+  const bannedZealyUsers = await loadCachedBannedZealyUsers();
+  console.log("Loaded cached banned users");
+  const zealyUserInfo = await loadCachedZealyUserInfo();
+  console.log("Loaded rest of zealy users");
 
-  let zealyUserInfo = await loadCachedZealyUserInfo();
   for (const bannedZealyUser of zealyUsersToBan) {
     if (dryRun === false) {
-      console.log(`Banning: ${bannedZealyUser}`);
       try {
-        await fetch(`${zealyUrl}/users/${bannedZealyUser}/ban`, {
-          method: "POST",
-          headers: { "x-api-key": prodKey, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reason: "Banned for eating the honey",
-          }),
-        });
+        if (!bannedZealyUsers[bannedZealyUser]) {
+          console.log(`Banning: ${bannedZealyUser}`);
+          await fetch(`${zealyUrl}/users/${bannedZealyUser}/ban`, {
+            method: "POST",
+            headers: {
+              "x-api-key": prodKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              reason: banReason,
+            }),
+          });
+          bannedZealyUsers[bannedZealyUser] = banReason;
+        } else {
+          console.log(`Already banned: ${bannedZealyUser}`);
+        }
+
         if (zealyUserInfo[bannedZealyUser]) {
           console.log(
             "Updating cached Zealy user status for: ",
@@ -116,18 +129,20 @@ export async function banZealyUsers(zealyUrl: string, dryRun: boolean = true) {
           );
           zealyUserInfo[bannedZealyUser].isBanned = true;
         }
-        bannedZealyUsers.push(bannedZealyUser);
       } catch (err) {
         console.log(err);
       }
     } else {
       console.log(`Dry Run Banning: ${bannedZealyUser}`);
-      bannedZealyUsers.push(bannedZealyUser);
+      bannedZealyUsers[bannedZealyUser] = banReason;
     }
   }
 
   if (!dryRun) {
-    saveJsonToFile(zealyUserInfo, `zealy-user-info.json`);
+    await Promise.all([
+      saveJsonToFile(zealyUserInfo, `zealy-user-info.json`),
+      saveJsonToFile(bannedZealyUsers, `banned-zealy-users.json`),
+    ]);
   }
   return bannedZealyUsers;
 }
@@ -213,8 +228,8 @@ export async function runZealyFaucet(
 
 export async function runZealyAirdrop(
   dryRun?: boolean,
-  enrichedCache?: any,
-  zealyUrl: string = ZEALY_DEV_URL
+  zealyUrl: string = ZEALY_DEV_URL,
+  enrichedCache?: any
 ) {
   console.log("Running Zealy EXP Airdrop");
   let balancesList: Balances = {};
@@ -245,9 +260,9 @@ export async function runZealyAirdrop(
   airdropList.lastAirdropTimeStamp = Math.floor(Date.now() / 1000);
 
   if (!enrichedCache) {
+    console.log("Fetching an enriching AR.IO State");
     const blockHeight = await getCurrentBlockHeight();
-    const state = await fetchAndSaveIOState(blockHeight);
-    enrichedCache.records = await enrichRecords(CACHE_URL, state.records);
+    enrichedCache = await fetchSaveAndEnrichIOState(blockHeight);
   }
 
   for (const zealyId in zealyUsers) {
@@ -407,5 +422,6 @@ export async function runZealyAirdrop(
 
   // Save any last changes to the .json file
   saveJsonToFile(airdropList, "airdrop-list.json");
+  console.log("Zealy EXP Airdrop complete");
   return airdropList;
 }
