@@ -33,6 +33,9 @@ import {
   HISTORICAL_EVENT_ATTENDEE_REWARD,
   HISTORICAL_ARDRIVE_TOKEN_REWARD,
   HISTORICAL_MANIFEST_UPLOAD_REWARD,
+  GNAT_PARTICIPANTS,
+  HISTORICAL_GNAT_REWARD,
+  EXEMPT_WALLETS,
 } from "./constants";
 import {
   AirdropList,
@@ -162,7 +165,6 @@ export function calculateHistoricalExp(
   turbo1GBUploadBalances: Balances,
   ogGatewayBalances: Balances,
   ogObserverBalances: Balances,
-  exemptWallets: Balances,
   arDriveUploaders: Balances,
   arweaveUploaders: Balances,
   eventAttendees: Balances,
@@ -410,6 +412,7 @@ export function calculateHistoricalExp(
       }
     }
   }
+
   // Points for having test IO tokens
   for (const owner in ioBalances) {
     // Initialize the score detail if not already
@@ -728,10 +731,29 @@ export function calculateHistoricalExp(
     }
   }
 
-  // TO DO: ADD AR HOLDERS
+  // Points for being in the GNAT
+  for (const owner of GNAT_PARTICIPANTS) {
+    // Initialize the score detail if not already
+    if (!scores[owner]) {
+      scores[owner] = {
+        totalPoints: 0,
+        totalNames: 0,
+        names: [],
+        categories: {},
+      };
+    }
+    if (!scores[owner].categories.gnatParticipant) {
+      scores[owner].totalPoints += HISTORICAL_GNAT_REWARD;
+      scores[owner].categories.gnatParticipant = {
+        value: 1,
+        exp: HISTORICAL_GNAT_REWARD,
+        awardedOnSprint: 0,
+      };
+    }
+  }
 
   // Filter out team wallets
-  for (const owner in exemptWallets) {
+  for (const owner of EXEMPT_WALLETS) {
     if (scores[owner]) {
       delete scores[owner];
     }
@@ -754,12 +776,12 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
   let turbo1GBUploadSnapshot: any = {};
   let ogGatewaySnapshot: any = {};
   let ogObserverSnapshot: any = {};
-  let exemptWalletSnapshot: any = {};
   let arDriveUsersSnapshot: any = {};
   let arweaveUsersSnapshot: any = {};
   let eventAttendeesSnapshot: any = {};
   let manifestUploaderSnapshot: any = {};
 
+  // load all of the data, based on blockheight
   if (blockHeight) {
     const ioStatePath = path.join(
       __dirname,
@@ -803,12 +825,6 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       "data",
       `testnet_og_observer_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
     );
-    const exemptWalletSnapshotPath = path.join(
-      __dirname,
-      "..",
-      "data",
-      `exempt_team_wallet_snapshot.json` // TO DO: SET THIS TO BE DYNAMIC
-    );
     const arDriveUsersSnapshotPath = path.join(
       __dirname,
       "..",
@@ -842,7 +858,6 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       turbo1GBUploadSnapshot = await loadJsonFile(turbo1GBUploadSnapshotPath);
       ogGatewaySnapshot = await loadJsonFile(ogGatewaySnapshotPath);
       ogObserverSnapshot = await loadJsonFile(ogObserverSnapshotPath);
-      exemptWalletSnapshot = await loadJsonFile(exemptWalletSnapshotPath);
       arDriveUsersSnapshot = await loadJsonFile(arDriveUsersSnapshotPath);
       arweaveUsersSnapshot = await loadJsonFile(arweaveUsersSnapshotPath);
       eventAttendeesSnapshot = await loadJsonFile(eventAttendeesSnapshotPath);
@@ -877,7 +892,6 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
       turbo1GBUploadSnapshot.balances,
       ogGatewaySnapshot.balances,
       ogObserverSnapshot.balances,
-      exemptWalletSnapshot.balances,
       arDriveUsersSnapshot.uploads,
       arweaveUsersSnapshot.uploads,
       eventAttendeesSnapshot.attendees,
@@ -886,7 +900,8 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
     const jsonFileName = "historical-exp-rewards-" + blockHeight + ".json";
     saveJsonToFile(scores, jsonFileName);
 
-    const balancesFileName = "exp-balances-" + blockHeight + ".json";
+    // this is the specific amount of EXP each user will receive for the historical airdrop
+    const balancesFileName = "historical-exp-balances-" + blockHeight + ".json";
     saveBalancesToFile(scores, balancesFileName);
 
     const csvData = jsonToCSV(scores);
@@ -931,6 +946,7 @@ function analyzeScores(data: HistoricalScores): void {
     "arweaveUserUploads",
     "manifestUploader",
     "eventAttendee",
+    "gnatParticipant",
   ];
 
   allCategories.forEach(

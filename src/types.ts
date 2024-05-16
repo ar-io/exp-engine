@@ -69,6 +69,7 @@ export type Categories = {
   arweaveUserUploads?: CategoryDetails;
   eventAttendee?: CategoryDetails;
   manifestUploader?: CategoryDetails;
+  gnatParticipant?: CategoryDetails;
 };
 
 export type CategoryDetails = {

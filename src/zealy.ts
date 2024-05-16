@@ -63,17 +63,26 @@ export async function getUserInfo(zealyUserId: string, zealyUrl: string) {
 }
 
 export async function getHoneyPotUsers(zealyUrl: string) {
-  let currentCursor = "";
+  console.log("Getting Zealy Honey eaters");
+  let currentCursor;
   const zealyBannedUserArray: any[] = [];
 
   while (true) {
-    const response = await fetch(
-      `${zealyUrl}/reviews?questId=${honeyPotQuestId}&cursor=${currentCursor}`,
-      {
+    let response;
+    if (currentCursor) {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${honeyPotQuestId}&cursor=${currentCursor}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": devKey },
+        }
+      );
+    } else {
+      response = await fetch(`${zealyUrl}/reviews?questId=${honeyPotQuestId}`, {
         method: "GET",
         headers: { "x-api-key": devKey },
-      }
-    );
+      });
+    }
 
     const data: any = await response.json();
     for (let i = 0; i < data.items.length; i += 1) {
@@ -251,20 +260,22 @@ export async function runZealyAirdrop(
     return {};
   }
 
+  // setup a new sprint in the airdrop list
   let sprintId = 1;
   if (airdropList.lastSprint >= 0) {
     sprintId = airdropList.lastSprint + 1;
     airdropList.lastSprint = sprintId;
   }
-
   airdropList.lastAirdropTimeStamp = Math.floor(Date.now() / 1000);
 
+  // enrich the arns registry by adding information about every single ANT registered, including ownership and undernames
   if (!enrichedCache) {
     console.log("Fetching an enriching AR.IO State");
     const blockHeight = await getCurrentBlockHeight();
     enrichedCache = await fetchSaveAndEnrichIOState(blockHeight);
   }
 
+  // calculate how much exp to award each zealy user based on their current xp and previous exp that has already been rewarded
   for (const zealyId in zealyUsers) {
     const zealyUser: any = zealyUsers[zealyId];
     if (zealyUser.unVerifiedBlockchainAddresses.arweave) {
@@ -402,12 +413,13 @@ export async function runZealyAirdrop(
     }
   }
 
+  // Save results of the airdrop as a new sprint in the airdrop-list
   saveJsonToFile(airdropList, "airdrop-list.json");
 
   // Perform the airdrop
   const result = await loadBalances(balancesList, dryRun);
 
-  // Update the airdroplist
+  // Update the airdroplist with the result message id from loading all balances
   for (const recipient in airdropList.recipients) {
     if (
       airdropList.recipients[recipient].sprintsParticipated[sprintId] &&
