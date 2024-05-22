@@ -64,6 +64,7 @@ export const ZEALY_PROD_URL = ZEALY_URL + "ar-io";
 export const ZEALY_TEST_URL = ZEALY_URL + "theawesomecommunity";
 export const ZEALY_DEV_URL = ZEALY_URL + "theblackfox";
 export const MIN_FAUCET_XP = 5000; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
+export const EXP_DENOMINATION = 1000000; // Matching a denomination of 6
 
 // AR.IO NETWORK
 export const GATEWAY_URL = "https://arweave.net/";

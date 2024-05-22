@@ -1,23 +1,15 @@
 import { loadBalances } from "./aoconnect";
 import { devKey, prodKey } from "./apikeys";
+import { transferTestTokens } from "./ar-io";
 import {
-  fetchSaveAndEnrichIOState,
-  transferTestTokens,
-  verifyNameQuests,
-} from "./ar-io";
-import {
-  BASIC_NAME_REWARD,
-  BASIC_UNDERNAME_REWARD,
+  EXP_DENOMINATION,
   FAUCET_QUANTITY,
   MIN_FAUCET_XP,
-  ROOT_DATA_POINTER_SET_REWARD,
-  UNDERNAME_DATA_POINTER_SET_REWARD,
   ZEALY_DEV_URL,
   honeyPotQuestId,
 } from "./constants";
 import { AirdropList, Balances, FaucetRecipient } from "./types";
 import {
-  getCurrentBlockHeight,
   isArweaveAddress,
   loadJsonFile,
   loadCachedZealyUserInfo,
@@ -270,9 +262,9 @@ export async function runZealyAirdrop(
 
   // enrich the arns registry by adding information about every single ANT registered, including ownership and undernames
   if (!enrichedCache) {
-    console.log("Fetching an enriching AR.IO State");
-    const blockHeight = await getCurrentBlockHeight();
-    enrichedCache = await fetchSaveAndEnrichIOState(blockHeight);
+    // console.log("Fetching an enriching AR.IO State");
+    // const blockHeight = await getCurrentBlockHeight();
+    // enrichedCache = await fetchSaveAndEnrichIOState(blockHeight);
   }
 
   // calculate how much exp to award each zealy user based on their current xp and previous exp that has already been rewarded
@@ -315,6 +307,8 @@ export async function runZealyAirdrop(
         // This must be a new sprint
         // Verify and reward on chain actions
         let expToReward = 0;
+
+        /*
         const nameQuestsCompleted = verifyNameQuests(
           arweaveAddress,
           enrichedCache.records
@@ -376,12 +370,12 @@ export async function runZealyAirdrop(
             awardedOnSprint: sprintId,
           };
           expToReward += UNDERNAME_DATA_POINTER_SET_REWARD;
-        }
+        } */
 
         // Convert new Zealy XP to EXP
         const currentSprintXp =
           zealyUser.xp - airdropList.recipients[arweaveAddress].xpEarned || 0;
-        expToReward += currentSprintXp; // 1 XP = 1 EXP
+        expToReward += currentSprintXp * EXP_DENOMINATION; // 1 XP = 1,000,000 EXP with a Denomination of 6
         airdropList.recipients[arweaveAddress].expRewarded += expToReward;
         airdropList.recipients[arweaveAddress].xpEarned = zealyUser.xp;
         airdropList.recipients[arweaveAddress].zealyId = zealyId;
@@ -433,7 +427,9 @@ export async function runZealyAirdrop(
   }
 
   // Save any last changes to the .json file
-  saveJsonToFile(airdropList, "airdrop-list.json");
+  saveJsonToFile(airdropList, "airdrop-list.json"); // master json
+  saveJsonToFile(airdropList, `airdrop-list-${sprintId}.json`); // sprint snapshot json
+
   console.log("Zealy EXP Airdrop complete");
   return airdropList;
 }
