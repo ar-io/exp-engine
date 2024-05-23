@@ -72,13 +72,18 @@ export async function loadBalances(balances: Balances, dryRun?: boolean) {
     } else {
       const { message } = await connect();
       const result = await message({
-        process: testExpProcessId,
+        process: expProcessId,
         signer: createDataItemSigner(wallet),
         tags: [{ name: "Action", value: "Load-Balances" }],
         data: JSON.stringify(balances),
       });
 
       console.log(`Loaded balances with txId ${result}`);
+      let totalDistributed = 0;
+      for (const key in balances) {
+        totalDistributed += balances[key];
+      }
+      console.log(`Distributed ${totalDistributed} EXP tokens`);
 
       // a small delay in case of bulk mints
       await delay(MINT_DELAY);

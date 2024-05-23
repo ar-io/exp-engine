@@ -1,6 +1,6 @@
 // Import axios
-import { GATEWAY_URL, keyfile } from "./constants";
-import { Balances, HistoricalScores, JWKInterface } from "./types";
+import { EXP_DENOMINATION, GATEWAY_URL, keyfile } from "./constants";
+import { AirdropList, Balances, HistoricalScores, JWKInterface } from "./types";
 import axios, { AxiosResponse } from "axios";
 import axiosRetry, { exponentialDelay } from "axios-retry";
 import fs from "fs";
@@ -194,4 +194,39 @@ export function writeCSVToFile(csvData: string, filename: string) {
   const filepath = path.join(__dirname, "..", "data", filename);
   fs.writeFileSync(filepath, csvData);
   console.log(`CSV file has been saved to ${filepath}`);
+}
+
+export async function fixAirDropList() {
+  let airdropList: AirdropList;
+  try {
+    const airdropRecipientsFilePath = path.join(
+      __dirname,
+      "..",
+      "data",
+      "airdrop-list.json"
+    );
+    airdropList = await loadJsonFile(airdropRecipientsFilePath);
+  } catch {
+    console.log(
+      "Airdrop Recipients data is missing.  Ensure airdrop-list.json exists"
+    );
+    return false;
+  }
+
+  for (const recipient in airdropList.recipients) {
+    airdropList.recipients[recipient].expRewarded =
+      airdropList.recipients[recipient].expRewarded * EXP_DENOMINATION; // Multiply by 1000000 to account for latest denomination
+    for (const sprint in airdropList.recipients[recipient]
+      .sprintsParticipated) {
+      airdropList.recipients[recipient].sprintsParticipated[
+        sprint
+      ].expRewarded =
+        airdropList.recipients[recipient].sprintsParticipated[sprint]
+          .expRewarded * EXP_DENOMINATION; // Multiply by 1000000 to account for latest denomination
+    }
+  }
+
+  // Save results of the airdrop as a new sprint in the airdrop-list
+  saveJsonToFile(airdropList, "airdrop-list-fixed-denomination.json");
+  return true;
 }

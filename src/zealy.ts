@@ -38,6 +38,8 @@ export async function getLeaderboard(zealyUrl: string) {
         console.log("User not found in local cache: ", data.data[i].userId);
         const userData: any = await getUserInfo(data.data[i].userId, zealyUrl);
         zealyUserInfo[data.data[i].userId] = userData;
+      } else {
+        zealyUserInfo[data.data[i].userId].xp = data.data[i].xp;
       }
     }
     totalPages = data.totalPages;
@@ -103,6 +105,7 @@ export async function banZealyUsers(dryRun: boolean = true, zealyUrl: string) {
   const zealyUserInfo = await loadCachedZealyUserInfo();
   console.log("Loaded rest of zealy users");
 
+  let bannedZealyUserCount = 0;
   for (const bannedZealyUser of zealyUsersToBan) {
     if (dryRun === false) {
       try {
@@ -119,6 +122,7 @@ export async function banZealyUsers(dryRun: boolean = true, zealyUrl: string) {
             }),
           });
           bannedZealyUsers[bannedZealyUser] = banReason;
+          bannedZealyUserCount += 1;
         } else {
           console.log(`Already banned: ${bannedZealyUser}`);
         }
@@ -135,10 +139,12 @@ export async function banZealyUsers(dryRun: boolean = true, zealyUrl: string) {
       }
     } else {
       console.log(`Dry Run Banning: ${bannedZealyUser}`);
+      bannedZealyUserCount += 1;
       bannedZealyUsers[bannedZealyUser] = banReason;
     }
   }
 
+  console.log(`Banned ${bannedZealyUserCount} new users`);
   if (!dryRun) {
     await Promise.all([
       saveJsonToFile(zealyUserInfo, `zealy-user-info.json`),
@@ -375,6 +381,12 @@ export async function runZealyAirdrop(
         // Convert new Zealy XP to EXP
         const currentSprintXp =
           zealyUser.xp - airdropList.recipients[arweaveAddress].xpEarned || 0;
+        //console.log(
+        //  `${zealyId}: Current sprint XP: ${currentSprintXp} total XP: ${zealyUser.xp}`
+        //);
+        if (zealyId === "7c7fee6e-760a-47d5-980b-24fb2501c168") {
+          console.log(zealyUser);
+        }
         expToReward += currentSprintXp * EXP_DENOMINATION; // 1 XP = 1,000,000 EXP with a Denomination of 6
         airdropList.recipients[arweaveAddress].expRewarded += expToReward;
         airdropList.recipients[arweaveAddress].xpEarned = zealyUser.xp;
@@ -427,8 +439,9 @@ export async function runZealyAirdrop(
   }
 
   // Save any last changes to the .json file
-  saveJsonToFile(airdropList, "airdrop-list.json"); // master json
+  saveJsonToFile(airdropList, `airdrop-list.json`); // master json
   saveJsonToFile(airdropList, `airdrop-list-${sprintId}.json`); // sprint snapshot json
+  saveJsonToFile(balancesList, `sprint-${sprintId}-distribution-list-.json`); // balances snapshot json
 
   console.log("Zealy EXP Airdrop complete");
   return airdropList;
