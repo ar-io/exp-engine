@@ -1,18 +1,17 @@
 import {
   CACHE_URL,
-  CONTRACT_ID,
   DEFAULT_ARNS_DATA_POINTER,
   ZEALY_START_TIMESTAMP,
+  testnetProcessId,
 } from "./constants";
 import { CachedRecords, JWKInterface } from "./types";
 import {
-  getCurrentBlockHeight,
   isArweaveAddress,
   loadWallet,
   retryFetch,
   saveJsonToFile,
 } from "./utilities";
-import { ArIO, ArweaveSigner, DENOMINATIONS } from "@ar.io/sdk";
+import { IO, ArweaveSigner } from "@ar.io/sdk";
 
 export async function transferTestTokens(
   target: string,
@@ -24,21 +23,21 @@ export async function transferTestTokens(
   const nodeSigner = new ArweaveSigner(wallet);
 
   // read and write client that has access to all APIs
-  const arIOWriteable = ArIO.init({
+  // set up client
+  const arIOWriteable = IO.init({
+    processId: testnetProcessId,
     signer: nodeSigner,
-    contractTxId: CONTRACT_ID,
   });
 
   if (!dryRun) {
     const transfer = await arIOWriteable.transfer({
       target,
       qty,
-      denomination: DENOMINATIONS.IO,
     });
-    console.log(`Transferred ${qty} tIO to ${target} with txId ${transfer.id}`);
+    console.log(`Transferred ${qty} to ${target} with txId ${transfer.id}`);
     return transfer.id;
   } else {
-    console.log(`Transferred ${qty} tIO to ${target} as dry run`);
+    console.log(`Transferred ${qty} to ${target} as dry run`);
     return "dry run";
   }
 }
@@ -55,19 +54,13 @@ export async function fetchCache(url: string): Promise<any> {
 }
 
 // Function to fetch data from ARNS cache with error handling
-export async function getState(blockHeight: number = 1415568): Promise<any> {
+export async function getRecords(): Promise<any> {
   try {
-    if (blockHeight) {
-      blockHeight = await getCurrentBlockHeight();
-    }
-
-    const contract = ArIO.init();
-    const stateAtHeight = await contract.getState({
-      evaluationOptions: { evalTo: { blockHeight } },
-    });
-    return stateAtHeight;
+    const arIO = IO.init();
+    const records = await arIO.getArNSRecords();
+    return records;
   } catch (error) {
-    console.error(`Error syncing state:`, error.message);
+    console.error(`Error getting records:`, error.message);
     return null; // Return null to indicate a failed fetch
   }
 }
@@ -152,17 +145,17 @@ export function verifyNameQuests(owner: string, enrichedRecords: any) {
 
 export async function fetchSaveAndEnrichIOState(blockHeight: number) {
   try {
-    const state = await getState(blockHeight);
+    const records = await getRecords();
     console.log("Got state");
-    const enrichedRecords = await enrichRecords(CACHE_URL, state.records);
-    state.records = enrichedRecords;
+    const enrichedRecords = await enrichRecords(CACHE_URL, records);
+    enrichedRecords;
 
-    const fileName = "ar-io-state-" + blockHeight + ".json";
-    saveJsonToFile(state, fileName);
+    const fileName = "ar-io-state-enriched-records" + blockHeight + ".json";
+    saveJsonToFile(enrichedRecords, fileName);
     console.log(
       `AR.IO Contract state data has been fetched and saved as ${fileName}, with skipped records where data could not be enriched.`
     );
-    return state;
+    return records;
   } catch (err) {
     console.log(err);
     return false;

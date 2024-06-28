@@ -1,21 +1,16 @@
-import { expProcessId } from "./constants";
 import { saveJsonToFile } from "./utilities";
-import { dryrun } from "@permaweb/aoconnect";
+import { ArIO } from "@ar.io/sdk";
 
 async function main() {
-  const dryRead = await dryrun({
-    process: expProcessId,
-    tags: [{ name: "Action", value: "Balances" }],
-  });
+  const arIO = ArIO.init();
+  const tIObalances = await arIO.getBalances();
+
   // console.log(`dry run results:`);
   // console.dir(dryRead.Messages[0], { depth: 30 });
   const currentTimestamp = Math.floor(Date.now() / 1000);
 
-  // Parse the JSON string into a JavaScript object
-  const data: Record<string, number> = JSON.parse(dryRead.Messages[0].Data);
-
   // Convert the object to an array of key-value pairs
-  const items: [string, number][] = Object.entries(data);
+  const items: [string, number][] = Object.entries(tIObalances);
 
   // Sort the array by the values in descending order
   items.sort((a: [string, number], b: [string, number]) => b[1] - a[1]);
@@ -24,10 +19,10 @@ async function main() {
   const sortedData: Record<string, number> = Object.fromEntries(items);
 
   // Convert the sorted object back to a JSON string
-  saveJsonToFile(sortedData, `exp-balances-${currentTimestamp}.json`);
+  saveJsonToFile(sortedData, `tio-balances-${currentTimestamp}.json`);
 
   // Extract values into an array
-  const balances: number[] = Object.values(data);
+  const balances: number[] = Object.values(tIObalances);
 
   // Calculate total balance
   const totalBalance = balances.reduce((sum, balance) => sum + balance, 0);

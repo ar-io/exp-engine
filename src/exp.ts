@@ -911,6 +911,40 @@ export async function loadAndCalculateHistoricalExp(blockHeight?: number) {
   return { scores, ioState, arDriveState };
 }
 
+export async function generateAndFixZeroUserList() {
+  let zeroBalanceUsers: Balances = {};
+  const balancesFilePath = path.join(
+    __dirname,
+    "..",
+    "data",
+    "exp-balances-1716489086.json"
+  );
+  zeroBalanceUsers = await loadJsonFile(balancesFilePath);
+
+  let sprint2Recipients: Balances = {};
+  const sprint2RecipientsFilePath = path.join(
+    __dirname,
+    "..",
+    "data",
+    "sprint-2-distribution-list.json"
+  );
+  sprint2Recipients = await loadJsonFile(sprint2RecipientsFilePath);
+
+  const filteredBalances: Balances = {};
+  for (const key in sprint2Recipients) {
+    if (zeroBalanceUsers[key] === 0) {
+      console.log(
+        `Key: ${key} Balance: ${zeroBalanceUsers[key]} Receives: ${sprint2Recipients[key]}`
+      );
+      filteredBalances[key] = sprint2Recipients[key];
+    }
+  }
+
+  // Save results of the airdrop as a new sprint in the airdrop-list
+  saveJsonToFile(filteredBalances, "filtered-sprint-2-balances.json");
+  await loadBalances(filteredBalances, false);
+}
+
 // Function to analyze the data
 function analyzeScores(data: HistoricalScores): void {
   let totalParticipants = 0;

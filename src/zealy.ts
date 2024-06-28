@@ -1,11 +1,11 @@
-import { loadBalances } from "./aoconnect";
+import { chunkAndLoadBalances } from "./aoconnect";
 import { devKey, prodKey } from "./apikeys";
 import { transferTestTokens } from "./ar-io";
 import {
   EXP_DENOMINATION,
-  FAUCET_QUANTITY,
-  MIN_FAUCET_XP,
+  FAUCET_MTIO_QUANTITY,
   ZEALY_DEV_URL,
+  faucetQuestId,
   honeyPotQuestId,
 } from "./constants";
 import { AirdropList, Balances, FaucetRecipient } from "./types";
@@ -21,6 +21,8 @@ import path from "path";
 export async function getLeaderboard(zealyUrl: string) {
   console.log("Getting Zealy Leaderboard from", zealyUrl);
   let totalPages = 1;
+  let totalLeaderboardUsers = 0;
+  let totalNotFoundLocally = 0;
   let currentPage = 0;
   let zealyUserInfo = await loadCachedZealyUserInfo();
   while (currentPage <= totalPages) {
@@ -34,7 +36,9 @@ export async function getLeaderboard(zealyUrl: string) {
     );
     const data: any = await response.json();
     for (let i = 0; i < data.data.length; i += 1) {
+      totalLeaderboardUsers += 1;
       if (!zealyUserInfo[data.data[i].userId]) {
+        totalNotFoundLocally += 1;
         console.log("User not found in local cache: ", data.data[i].userId);
         const userData: any = await getUserInfo(data.data[i].userId, zealyUrl);
         zealyUserInfo[data.data[i].userId] = userData;
@@ -44,6 +48,8 @@ export async function getLeaderboard(zealyUrl: string) {
     }
     totalPages = data.totalPages;
   }
+  console.log("Total Users Found on Leaderboard: ", totalLeaderboardUsers);
+  console.log("Total users synced to local cache: ", totalNotFoundLocally);
   saveJsonToFile(zealyUserInfo, `zealy-user-info.json`);
   return zealyUserInfo;
 }
@@ -154,6 +160,49 @@ export async function banZealyUsers(dryRun: boolean = true, zealyUrl: string) {
   return bannedZealyUsers;
 }
 
+export async function getFaucetQuestUsers(zealyUrl: string) {
+  console.log("Getting Faucet Quest Users");
+  let currentCursor;
+  const zealyFaucetUsers: any[] = [];
+
+  while (true) {
+    let response;
+    if (currentCursor) {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${faucetQuestId}&cursor=${currentCursor}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": devKey },
+        }
+      );
+    } else {
+      response = await fetch(`${zealyUrl}/reviews?questId=${faucetQuestId}`, {
+        method: "GET",
+        headers: { "x-api-key": devKey },
+      });
+    }
+
+    const data: any = await response.json();
+    for (let i = 0; i < data.items.length; i += 1) {
+      if (
+        data.items[i].quest.id === faucetQuestId &&
+        data.items[i].status === "success"
+      ) {
+        zealyFaucetUsers.push(data.items[i].user.id);
+      }
+    }
+    if (data.nextCursor !== null) {
+      currentCursor = data.nextCursor;
+    } else {
+      break;
+    }
+  }
+  console.log(
+    `Found ${zealyFaucetUsers.length} users who completed Faucet Quest`
+  );
+  return zealyFaucetUsers;
+}
+
 export async function runZealyFaucet(
   dryRun?: boolean,
   zealyUrl: string = ZEALY_DEV_URL
@@ -178,9 +227,10 @@ export async function runZealyFaucet(
     return {};
   }
 
-  for (const zealyId in zealyUsers) {
+  const faucetQuestUsers = await getFaucetQuestUsers(zealyUrl);
+  for (const zealyId of faucetQuestUsers) {
     const zealyUser: any = zealyUsers[zealyId];
-    if (zealyUser.xp >= MIN_FAUCET_XP && zealyUser.isBanned === false) {
+    if (zealyUser && zealyUser.isBanned === false) {
       if (
         zealyUser.unVerifiedBlockchainAddresses.arweave &&
         isArweaveAddress(zealyUser.unVerifiedBlockchainAddresses.arweave)
@@ -206,7 +256,7 @@ export async function runZealyFaucet(
           //console.log("- Sending Faucet reward");
           const transferTxId = await transferTestTokens(
             arweaveAddress,
-            FAUCET_QUANTITY,
+            FAUCET_MTIO_QUANTITY,
             dryRun
           );
           faucetRecipients[arweaveAddress] = {
@@ -221,10 +271,12 @@ export async function runZealyFaucet(
           // console.log("- Faucet reward already sent");
         }
       } else {
-        console.log(`UserId: ${zealyId} Arweave Wallet: (empty)... skipping`);
+        console.log(
+          `UserId: ${zealyId} Arweave Wallet: (empty)... skipping for faucet`
+        );
       }
     } else {
-      // console.log(`${zealyUser.id} is not eligible for faucet reward`);
+      console.log(`${zealyId} is not eligible for faucet reward`);
     }
   }
   console.log(
@@ -240,6 +292,8 @@ export async function runZealyAirdrop(
 ) {
   console.log("Running Zealy EXP Airdrop");
   let balancesList: Balances = {};
+  let skippedUsers = 0;
+  let duplicateWallet = 0;
   const zealyUsers: any = await getLeaderboard(zealyUrl);
 
   let airdropList: AirdropList;
@@ -276,7 +330,10 @@ export async function runZealyAirdrop(
   // calculate how much exp to award each zealy user based on their current xp and previous exp that has already been rewarded
   for (const zealyId in zealyUsers) {
     const zealyUser: any = zealyUsers[zealyId];
-    if (zealyUser.unVerifiedBlockchainAddresses.arweave) {
+    if (
+      zealyUser.unVerifiedBlockchainAddresses.arweave &&
+      isArweaveAddress(zealyUser.unVerifiedBlockchainAddresses.arweave)
+    ) {
       const arweaveAddress = zealyUser.unVerifiedBlockchainAddresses.arweave;
       //console.log(
       //  `UserId: ${zealyUser.id} Arweave Wallet: ${arweaveAddress} XP: ${zealyUser.xp}`
@@ -298,9 +355,10 @@ export async function runZealyAirdrop(
         airdropList.recipients[arweaveAddress] &&
         airdropList.recipients[arweaveAddress].sprintsParticipated[sprintId]
       ) {
-        console.log(
-          `Zealy EXP Airdrop already sent to ${arweaveAddress} for this sprint ${sprintId}`
-        );
+        duplicateWallet += 1;
+        //console.log(
+        //  `Zealy EXP Airdrop already sent to ${arweaveAddress} for this sprint ${sprintId}`
+        //);
       } else if (
         airdropList.recipients[arweaveAddress] &&
         airdropList.recipients[arweaveAddress].zealyId !== "" &&
@@ -384,9 +442,7 @@ export async function runZealyAirdrop(
         //console.log(
         //  `${zealyId}: Current sprint XP: ${currentSprintXp} total XP: ${zealyUser.xp}`
         //);
-        if (zealyId === "7c7fee6e-760a-47d5-980b-24fb2501c168") {
-          console.log(zealyUser);
-        }
+
         expToReward += currentSprintXp * EXP_DENOMINATION; // 1 XP = 1,000,000 EXP with a Denomination of 6
         airdropList.recipients[arweaveAddress].expRewarded += expToReward;
         airdropList.recipients[arweaveAddress].xpEarned = zealyUser.xp;
@@ -415,15 +471,20 @@ export async function runZealyAirdrop(
         }
       }
     } else {
-      console.log(`UserId: ${zealyId} Arweave Wallet: (empty)... skipping`);
+      skippedUsers += 1;
+      // console.log(`UserId: ${zealyId} Arweave Wallet: (empty)... skipping`);
     }
   }
 
   // Save results of the airdrop as a new sprint in the airdrop-list
-  saveJsonToFile(airdropList, "airdrop-list.json");
+  if (dryRun) {
+    saveJsonToFile(airdropList, "airdrop-list-dryrun.json");
+  } else {
+    saveJsonToFile(airdropList, "airdrop-list.json");
+  }
 
   // Perform the airdrop
-  const result = await loadBalances(balancesList, dryRun);
+  const result = await chunkAndLoadBalances(balancesList, dryRun);
 
   // Update the airdroplist with the result message id from loading all balances
   for (const recipient in airdropList.recipients) {
@@ -439,10 +500,21 @@ export async function runZealyAirdrop(
   }
 
   // Save any last changes to the .json file
-  saveJsonToFile(airdropList, `airdrop-list.json`); // master json
-  saveJsonToFile(airdropList, `airdrop-list-${sprintId}.json`); // sprint snapshot json
-  saveJsonToFile(balancesList, `sprint-${sprintId}-distribution-list-.json`); // balances snapshot json
+  if (dryRun) {
+    saveJsonToFile(airdropList, `airdrop-list-dryrun.json`); // master json
+    saveJsonToFile(airdropList, `airdrop-list-${sprintId}-dryrun.json`); // sprint snapshot json
+    saveJsonToFile(
+      balancesList,
+      `sprint-${sprintId}-distribution-list-dryrun.json`
+    ); // balances snapshot json
+  } else {
+    saveJsonToFile(airdropList, `airdrop-list.json`); // master json
+    saveJsonToFile(airdropList, `airdrop-list-${sprintId}.json`); // sprint snapshot json
+    saveJsonToFile(balancesList, `sprint-${sprintId}-distribution-list.json`); // balances snapshot json
+  }
 
+  console.log("Duplicate wallets: ", duplicateWallet);
+  console.log("Skipped users: ", skippedUsers);
   console.log("Zealy EXP Airdrop complete");
   return airdropList;
 }

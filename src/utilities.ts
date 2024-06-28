@@ -6,7 +6,7 @@ import axiosRetry, { exponentialDelay } from "axios-retry";
 import fs from "fs";
 import * as path from "path";
 
-export const loadWallet = (): JWKInterface => {
+export function loadWallet(): JWKInterface {
   if (process.env.JWK) {
     return JSON.parse(process.env.JWK);
   }
@@ -17,7 +17,7 @@ export const loadWallet = (): JWKInterface => {
   throw new Error(
     "No wallet found. Provide it via WALLET_FILE_PATH or JWK, or update the `keyfile` path in constants.ts"
   );
-};
+}
 
 export async function retryFetch(reqURL: string): Promise<AxiosResponse<any>> {
   const axiosInstance = axios.create();
@@ -229,4 +229,30 @@ export async function fixAirDropList() {
   // Save results of the airdrop as a new sprint in the airdrop-list
   saveJsonToFile(airdropList, "airdrop-list-fixed-denomination.json");
   return true;
+}
+
+// Function to chunk an object into smaller objects with a specified maximum size
+export function chunkObject<T>(
+  obj: Record<string, T>,
+  chunkSize: number
+): Record<string, T>[] {
+  const chunks: Record<string, T>[] = [];
+  let currentChunk: Record<string, T> = {};
+  let currentSize = 0;
+
+  for (const key in obj) {
+    if (currentSize >= chunkSize) {
+      chunks.push(currentChunk);
+      currentChunk = {};
+      currentSize = 0;
+    }
+    currentChunk[key] = obj[key];
+    currentSize++;
+  }
+
+  if (currentSize > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
 }

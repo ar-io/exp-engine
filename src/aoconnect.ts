@@ -1,6 +1,6 @@
 import { MINT_DELAY, expProcessId, testExpProcessId } from "./constants";
 import { Balances, JWKInterface } from "./types";
-import { delay, loadWallet } from "./utilities";
+import { chunkObject, delay, loadWallet } from "./utilities";
 
 const { connect, createDataItemSigner } = require("@permaweb/aoconnect");
 const wallet: JWKInterface = loadWallet();
@@ -65,6 +65,11 @@ export async function mintEXP(
 
 export async function loadBalances(balances: Balances, dryRun?: boolean) {
   console.log(`Loading ${Object.keys(balances).length} balances`);
+  let totalDistributed = 0;
+  for (const key in balances) {
+    totalDistributed += balances[key];
+  }
+  console.log(`Distributing ${totalDistributed} EXP tokens`);
   try {
     if (dryRun) {
       await delay(MINT_DELAY);
@@ -77,13 +82,7 @@ export async function loadBalances(balances: Balances, dryRun?: boolean) {
         tags: [{ name: "Action", value: "Load-Balances" }],
         data: JSON.stringify(balances),
       });
-
       console.log(`Loaded balances with txId ${result}`);
-      let totalDistributed = 0;
-      for (const key in balances) {
-        totalDistributed += balances[key];
-      }
-      console.log(`Distributed ${totalDistributed} EXP tokens`);
 
       // a small delay in case of bulk mints
       await delay(MINT_DELAY);
@@ -92,5 +91,49 @@ export async function loadBalances(balances: Balances, dryRun?: boolean) {
   } catch (err) {
     console.log(err);
     return false;
+  }
+}
+
+export async function chunkAndLoadBalances(
+  balances: Record<string, number>,
+  dryRun?: boolean
+) {
+  const chunkSize = 10000; // Chunk size of 10,000 items
+  const chunks = chunkObject(balances, chunkSize);
+
+  console.log(
+    `Loading ${Object.keys(balances).length} balances in ${
+      chunks.length
+    } chunks`
+  );
+  let totalDistributed = 0;
+  for (const key in balances) {
+    totalDistributed += balances[key];
+  }
+  console.log(`Distributing ${totalDistributed} EXP tokens`);
+
+  try {
+    for (const chunk of chunks) {
+      if (dryRun) {
+        await delay(MINT_DELAY);
+        console.log("Dry run completed for chunk");
+      } else {
+        const { message } = await connect();
+        const result = await message({
+          process: expProcessId,
+          signer: createDataItemSigner(wallet),
+          tags: [{ name: "Action", value: "Load-Balances" }],
+          data: JSON.stringify(chunk),
+        });
+        console.log(`Loaded balances with txId ${result}`);
+
+        // a small delay in case of bulk mints
+        await delay(MINT_DELAY);
+      }
+    }
+    return dryRun ? "dry run" : "success";
+  } catch (err) {
+    console.log(err);
+    return "error";
   }
 }
