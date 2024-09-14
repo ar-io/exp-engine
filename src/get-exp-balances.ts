@@ -1,18 +1,36 @@
-import { expProcessId } from "./constants";
+import { AO_CU_URL, expProcessId } from "./constants";
 import { saveJsonToFile } from "./utilities";
-import { dryrun } from "@permaweb/aoconnect";
+import { connect } from "@permaweb/aoconnect";
+
+const { dryrun } = connect({
+  CU_URL: AO_CU_URL,
+});
 
 async function main() {
   const dryRead = await dryrun({
     process: expProcessId,
     tags: [{ name: "Action", value: "Balances" }],
   });
-  // console.log(`dry run results:`);
-  // console.dir(dryRead.Messages[0], { depth: 30 });
+
   const currentTimestamp = Math.floor(Date.now() / 1000);
 
+  // Ensure the Messages array exists and contains at least one message
+  if (!dryRead.Messages || dryRead.Messages.length === 0) {
+    throw new Error("No messages returned from dryrun.");
+  }
+
+  // Ensure the first message contains data
+  if (!dryRead.Messages[0].Data) {
+    throw new Error("No data found in the first message.");
+  }
+
   // Parse the JSON string into a JavaScript object
-  const data: Record<string, number> = JSON.parse(dryRead.Messages[0].Data);
+  let data: Record<string, number>;
+  try {
+    data = JSON.parse(dryRead.Messages[0].Data);
+  } catch (error) {
+    throw new Error("Failed to parse JSON data: " + error.message);
+  }
 
   // Convert the object to an array of key-value pairs
   const items: [string, number][] = Object.entries(data);
@@ -23,7 +41,7 @@ async function main() {
   // Convert the sorted array back to an object
   const sortedData: Record<string, number> = Object.fromEntries(items);
 
-  // Convert the sorted object back to a JSON string
+  // Convert the sorted object back to a JSON string and save it
   saveJsonToFile(sortedData, `exp-balances-${currentTimestamp}.json`);
 
   // Extract values into an array

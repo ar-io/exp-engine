@@ -41,4 +41,8 @@ yarn.lock
 
 # private keys and api keys
 key.json
+tio-key.json
+exp-key.json
 /src/apikeys.ts
+
+/data/*

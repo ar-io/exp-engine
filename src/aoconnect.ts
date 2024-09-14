@@ -1,9 +1,14 @@
-import { MINT_DELAY, expProcessId, testExpProcessId } from "./constants";
+import {
+  AO_CU_URL,
+  MINT_DELAY,
+  expProcessId,
+  testExpProcessId,
+} from "./constants";
 import { Balances, JWKInterface } from "./types";
 import { chunkObject, delay, loadWallet } from "./utilities";
 
 const { connect, createDataItemSigner } = require("@permaweb/aoconnect");
-const wallet: JWKInterface = loadWallet();
+const wallet: JWKInterface = loadWallet("exp");
 
 export async function transferEXP(
   airdropRecipient: string,
@@ -69,7 +74,7 @@ export async function loadBalances(balances: Balances, dryRun?: boolean) {
   for (const key in balances) {
     totalDistributed += balances[key];
   }
-  console.log(`Distributing ${totalDistributed} EXP tokens`);
+  console.log(`Distributing ${totalDistributed} mEXP tokens`);
   try {
     if (dryRun) {
       await delay(MINT_DELAY);
@@ -110,7 +115,7 @@ export async function chunkAndLoadBalances(
   for (const key in balances) {
     totalDistributed += balances[key];
   }
-  console.log(`Distributing ${totalDistributed} EXP tokens`);
+  console.log(`Distributing ${totalDistributed} mEXP tokens`);
 
   try {
     for (const chunk of chunks) {
@@ -118,7 +123,10 @@ export async function chunkAndLoadBalances(
         await delay(MINT_DELAY);
         console.log("Dry run completed for chunk");
       } else {
-        const { message } = await connect();
+        const { message } = await connect({
+          CU_URL: AO_CU_URL,
+        });
+
         const result = await message({
           process: expProcessId,
           signer: createDataItemSigner(wallet),

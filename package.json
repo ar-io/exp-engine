@@ -12,7 +12,7 @@
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "@ar.io/sdk": "1.0.3-alpha.1",
+    "@ar.io/sdk": "^2.0.2",
     "@commitlint/config-conventional": "^17.7.0",
     "@permaweb/aoconnect": "^0.0.45",
     "@trivago/prettier-plugin-sort-imports": "^4.0.0",
@@ -52,7 +52,12 @@
     "version": "yarn run format && git add -A src",
     "postversion": "git push && git push --tags",
     "start": "yarn run build && node ./lib/index.js",
-    "test": "yarn run build && node ./lib/test.js"
+    "test": "yarn run build && node ./lib/test.js",
+    "send-exp-tokens": "yarn run build && node ./lib/send-exp-tokens.js",
+    "send-tio-tokens": "yarn run build && node ./lib/send-tio-tokens.js",
+    "get-exp-balances": "yarn run build && node ./lib/get-exp-balances.js",
+    "get-tio-balances": "yarn run build && node ./lib/get-tio-balances.js",
+    "get-dio-balances": "yarn run build && node ./lib/get-dio-balances.js"
   },
   "lint-staged": {
     "**/*.{ts,js,json}": [

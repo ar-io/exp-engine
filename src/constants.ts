@@ -1,11 +1,21 @@
-export const keyfile = process.env.WALLET_FILE_PATH || "key.json";
+export const expAirdropKeyfile =
+  process.env.EXP_AIRDROP_WALLET_FILE_PATH || "exp-key.json";
+export const tIOfaucetKeyfile =
+  process.env.TIO_FAUCET_WALLET_FILE_PATH || "tio-key.json";
 export const MINT_DELAY = 50; // 100 ms delay for minting
 export const testExpProcessId = "mbGcJfiMXhHAX2-TBYGjonztCdGY1GEuQ66Wt3AINZI"; // testnet
 export const expProcessId = "aYrCboXVSl1AXL9gPFe3tfRxRf0ZmkOXH65mKT0HHZw"; // mainnet
 export const testnetProcessId = "agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA";
+export const AO_CU_URL = "https://cu.ar-io.dev";
 export const honeyPotQuestId = "5cdb7119-5407-460c-baa6-c37f225147ea";
-export const faucetQuestId = "9fd3daa7-434f-4579-8178-cd88e6cb3d17"; //
+export const faucetQuestId = "3e77d5ef-f34d-4d4d-963d-4569a1a28511"; //
 // export const faucetQuestId = "39c0c984-e325-40d6-bec6-7e3a6646fd92"; testnet
+// export const ardriveUploadQuestId = "395b24b1-05ad-429b-9b86-4c69fea8a50f"; // devnet
+export const ardriveUploadQuestId = "f2c619de-f24c-4005-866f-204158f2e323"; // mainnet
+// export const arnsNameQuestId = "fd9b7af0-33ff-4e22-9c1b-a5b30098a9b6"; // devnet
+export const arnsNameQuestId = "9fd3daa7-434f-4579-8178-cd88e6cb3d17"; // mainnet
+export const delegatedStakeQuestId = "a83630bb-d6a4-4c89-bbe6-611945b0960e"; // mainnet
+export const bazarQuestId = "055b6f9f-448b-4259-aac1-8d1ecf96d4b9"; //mainnet
 
 // ECOSYSTEM REWARDS
 export const HISTORICAL_TEST_TOKEN_HOLDER_REWARD = 50;
@@ -66,8 +76,12 @@ export const FAUCET_MTIO_QUANTITY = 600_000_000;
 export const ZEALY_PROD_URL = ZEALY_URL + "ar-io";
 export const ZEALY_TEST_URL = ZEALY_URL + "theawesomecommunity";
 export const ZEALY_DEV_URL = ZEALY_URL + "theblackfox";
+export const MIN_XP_TO_QUALIFY = 500; // The minimum amount of XP a Zealy user must have to qualify for EXP airdrop
 export const MIN_FAUCET_XP = 5000; // The minimum amount of XP a Zealy user must have to qualify for tIO faucet
 export const EXP_DENOMINATION = 1000000; // Matching a denomination of 6
+export const PERMAWEB_MODULE_ARDRIVE_START_TIME = 1721793600; // 7/24/2024
+export const PERMAWEB_MODULE_ARNS_START_TIME =
+  PERMAWEB_MODULE_ARDRIVE_START_TIME * 1000;
 
 // AR.IO NETWORK
 export const GATEWAY_URL = "https://arweave.net/";

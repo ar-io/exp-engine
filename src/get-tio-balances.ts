@@ -45,7 +45,7 @@ function analyzeBalances(balances: Balances) {
   const sortedData: Record<string, number> = Object.fromEntries(balancesItems);
 
   // Convert the sorted object back to a JSON string
-  saveJsonToFile(sortedData, `dio-balances-${currentTimestamp}.json`);
+  saveJsonToFile(sortedData, `tio-balances-${currentTimestamp}.json`);
 
   // Extract values into an array
   const balancesArray: number[] = Object.values(balances);
@@ -331,3 +331,113 @@ function analyzeGateways(gateways: Gateways) {
     totalOperatorStake: summary.totalOperatorStake,
   };
 }
+
+/*
+async function main() {
+  const io = IO.init({
+    process: new AOProcess({
+      processId: expProcessId,
+      ao: connect({
+        CU_URL: AO_CU_URL,
+      }),
+    }),
+  });
+
+  const balances = await io.getBalances({
+    cursor: "-4xgjroXENKYhTWqrBo57HQwvDL51mMdfsdsxJy6Y2Z_sA",
+    limit: 100000,
+    sortBy: "balance",
+    sortOrder: "desc",
+  });
+
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+
+  // Extract the balances from the response
+  const items: AoBalanceWithAddress[] = balances.items;
+
+  // Sort the array by balance in descending order
+  items.sort((a, b) => b.balance - a.balance);
+
+  // Convert sorted items into an object with address as key and balance as value
+  const sortedData: Record<string, number> = Object.fromEntries(
+    items.map((item) => [item.address, item.balance])
+  );
+
+  // Save the sorted data to a JSON file
+  saveJsonToFile(sortedData, `exp-balances-${currentTimestamp}.json`);
+
+  // Extract balance values into an array for further calculations
+  const balanceValues: number[] = items.map((item) => item.balance);
+
+  // Calculate total balance
+  const totalBalance = balanceValues.reduce((sum, balance) => sum + balance, 0);
+
+  // Calculate average balance
+  const averageBalance = totalBalance / balanceValues.length;
+
+  // Find minimum and maximum balances
+  const minBalance = Math.min(...balanceValues);
+  const maxBalance = Math.max(...balanceValues);
+
+  // Count total balance holders
+  const totalBalanceHolders = balanceValues.length;
+
+  // Count non-zero balance holders
+  const nonZeroBalanceHolders = balanceValues.filter(
+    (balance) => balance > 0
+  ).length;
+
+  // Categorize balances into ranges
+  const ranges = {
+    "0": 0,
+    "1-25M": 0,
+    "25M-50M": 0,
+    "50M-100M": 0,
+    "100M-150M": 0,
+    "150M-200M": 0,
+    "200M+": 0,
+  };
+
+  balanceValues.forEach((balance) => {
+    if (balance === 0) {
+      ranges["0"]++;
+    } else if (balance <= 25000000) {
+      ranges["1-25M"]++;
+    } else if (balance <= 50000000) {
+      ranges["25M-50M"]++;
+    } else if (balance <= 100000000) {
+      ranges["50M-100M"]++;
+    } else if (balance <= 150000000) {
+      ranges["100M-150M"]++;
+    } else if (balance <= 200000000) {
+      ranges["150M-200M"]++;
+    } else {
+      ranges["200M+"]++;
+    }
+  });
+
+  // Generate the report
+  const report = `
+Timestamp: ${currentTimestamp}
+Balance Report:
+---------------
+Total Balance Holders: ${totalBalanceHolders}
+Non-Zero Balance Holders: ${nonZeroBalanceHolders}
+Total Balance: ${(totalBalance / 1_000_000).toFixed(6)} IO
+Average Balance: ${(averageBalance / 1_000_000).toFixed(6)} IO
+Minimum Balance: ${(minBalance / 1_000_000).toFixed(6)} IO
+Maximum Balance: ${(maxBalance / 1_000_000).toFixed(6)} IO
+
+Balance Distribution:
+0: ${ranges["0"]}
+1-25M: ${ranges["1-25M"]}
+25-50M: ${ranges["25M-50M"]}
+50M-100M: ${ranges["50M-100M"]}
+100M-150M: ${ranges["100M-150M"]}
+150M-200M: ${ranges["150M-200M"]}
+200M+: ${ranges["200M+"]}
+`;
+
+  console.log(report);
+}
+*/

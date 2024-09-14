@@ -1,21 +1,31 @@
 // Import axios
-import { EXP_DENOMINATION, GATEWAY_URL, keyfile } from "./constants";
+import {
+  EXP_DENOMINATION,
+  GATEWAY_URL,
+  expAirdropKeyfile,
+  tIOfaucetKeyfile,
+} from "./constants";
 import { AirdropList, Balances, HistoricalScores, JWKInterface } from "./types";
 import axios, { AxiosResponse } from "axios";
 import axiosRetry, { exponentialDelay } from "axios-retry";
 import fs from "fs";
 import * as path from "path";
 
-export function loadWallet(): JWKInterface {
-  if (process.env.JWK) {
+export function loadWallet(type?: string): JWKInterface {
+  if (type === "faucet" || type === "tio") {
+    if (fs.existsSync(tIOfaucetKeyfile)) {
+      return JSON.parse(fs.readFileSync(tIOfaucetKeyfile, "utf8"));
+    }
+  } else if (type === "exp") {
+    if (fs.existsSync(expAirdropKeyfile)) {
+      return JSON.parse(fs.readFileSync(expAirdropKeyfile, "utf8"));
+    }
+  } else if (process.env.JWK) {
     return JSON.parse(process.env.JWK);
-  }
-  if (fs.existsSync(keyfile)) {
-    return JSON.parse(fs.readFileSync(keyfile, "utf8"));
   }
 
   throw new Error(
-    "No wallet found. Provide it via WALLET_FILE_PATH or JWK, or update the `keyfile` path in constants.ts"
+    "No wallet found. Provide it via WALLET_FILE_PATH or JWK, or update the `expAirdropKeyfile` path in constants.ts"
   );
 }
 
