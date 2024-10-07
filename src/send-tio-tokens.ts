@@ -17,7 +17,7 @@ const recipientsFilePath = path.join(
   __dirname,
   "..",
   "data",
-  "tIO_ardrive_under_100KiB_airdrop_targets-5.json"
+  "token2049-tio-recipients.json"
 );
 
 const io = IO.init({
@@ -69,7 +69,7 @@ async function distributeTokens(dryRun = true) {
             );
             transactionId = txId;
             console.log(
-              `Transaction successful! Sent ${tokenAmount} tokens to ${address}. Transaction ID: ${txId}`
+              `Transaction successful! Sent ${tokenAmount} mIO tokens to ${address}. Transaction ID: ${txId}`
             );
           } catch (error) {
             console.error(
@@ -80,7 +80,7 @@ async function distributeTokens(dryRun = true) {
           }
         } else {
           console.log(
-            `Dry-run: Would send ${tokenAmount} tokens to ${address}.`
+            `Dry-run: Would send ${tokenAmount} mIO tokens to ${address}.`
           );
         }
 
@@ -103,7 +103,7 @@ async function distributeTokens(dryRun = true) {
 
   // Log the final result after all transfers are done
   console.log(
-    `Distributed ${totalTokenAmount} tokens to ${distributionCount} users`
+    `Distributed ${totalTokenAmount} mIO tokens to ${distributionCount} users`
   );
 
   // Save output data to a CSV file
@@ -122,8 +122,8 @@ async function saveOutputToCSV(
   const currentTimestamp = Math.floor(Date.now() / 1000);
 
   const filePath = dryRun
-    ? `data/distribution_dryrun-${currentTimestamp}.csv`
-    : `data/distribution_report-${currentTimestamp}.csv`;
+    ? `data/tio-distribution_dryrun-${currentTimestamp}.csv`
+    : `data/tio-distribution_report-${currentTimestamp}.csv`;
 
   // Create CSV writer
   const csvWriter = createObjectCsvWriter({
@@ -141,7 +141,7 @@ async function saveOutputToCSV(
   console.log(`Output saved to ${filePath}`);
 }
 
-distributeTokens(false) // set to `true` to dry run
+distributeTokens(true) // set to `true` to dry run
   .then(() => {
     console.log("Token distribution completed.");
   })

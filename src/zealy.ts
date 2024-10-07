@@ -1,6 +1,7 @@
 import { chunkAndLoadBalances } from "./aoconnect";
 import { devKey, prodKey } from "./apikeys";
 import {
+  getArDriveNameTxs,
   getGateways,
   getRecords,
   getState,
@@ -15,12 +16,14 @@ import {
   PERMAWEB_MODULE_ARDRIVE_START_TIME,
   PERMAWEB_MODULE_ARNS_START_TIME,
   ZEALY_DEV_URL,
+  arDriveArNSQuestId,
   ardriveUploadQuestId,
   arnsNameQuestId,
   bazarQuestId,
   delegatedStakeQuestId,
   faucetQuestId,
   honeyPotQuestId,
+  undernameQuestId,
 } from "./constants";
 import { AirdropList, Balances, FaucetRecipient } from "./types";
 import {
@@ -29,6 +32,7 @@ import {
   loadCachedZealyUserInfo,
   saveJsonToFile,
   loadCachedBannedZealyUsers,
+  splitArNSName,
 } from "./utilities";
 import path from "path";
 
@@ -329,15 +333,24 @@ export async function reviewUseThePermawebModule(
   zealyUrl: string
 ) {
   let arnsCursor;
+  let undernameCursor;
+  let undernameQuesterCount = 0;
   let arnsQuesters = 0;
   let delegatedStakeCursor;
   let bazarCursor;
+  let arDriveArNSCursor;
+  let undernameNotFoundCount = 0;
+  let undernameNameNotFoundCount = 0;
   let nameNotFoundCount = 0;
+  let undernameTooEarlyCount = 0;
   let nameTooEarlyCount = 0;
+  let zealyUserDoesntOwnUnderNameCount = 0;
   let zealyUserDoesntOwnNameCount = 0;
   let delegatedStakerQuesterCount = 0;
   let bazarQuesterCount = 0;
   let bazarQuesterFailedCount = 0;
+  let arDriveArNSQuesterCount = 0;
+  let arDriveArNSQuesterFailedCount = 0;
   let delegatedStakerCount = 0;
 
   // get all Zealy users
@@ -437,6 +450,116 @@ export async function reviewUseThePermawebModule(
     }
     if (data.nextCursor !== null) {
       arnsCursor = data.nextCursor;
+    } else {
+      break;
+    }
+  }
+
+  // Get arns name quest and process reviews
+  let undernameQuesters: any[] = [];
+  console.log("Processing Undername Quest Reviews");
+  while (true) {
+    let response;
+    if (undernameCursor) {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${undernameQuestId}&cursor=${undernameCursor}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": prodKey },
+        }
+      );
+    } else {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${undernameQuestId}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": prodKey },
+        }
+      );
+    }
+
+    const data: any = await response.json();
+    for (let i = 0; i < data.items.length; i += 1) {
+      if (
+        data.items[i].quest.id === undernameQuestId &&
+        data.items[i].status === "pending"
+      ) {
+        undernameQuesterCount++;
+        const name = extractNameFromUrl(
+          data.items[i].tasks[0].value.toLowerCase()
+        );
+
+        const { undername, rootname } = splitArNSName(name);
+
+        console.log(`   Zealy ID: ${data.items[i].user.id}`);
+        console.log(`      Processing Name: ${name}`);
+
+        const nameFound = findRecordByName(rootname, records);
+        if (!nameFound) {
+          // DISQUALIFIED
+          // Name Not Found
+          undernameNameNotFoundCount++;
+          console.log("      DISQUALIFIED (Undername name not found)");
+          await pendingToFail(dryRun, zealyUrl, data.items[i].id);
+          continue;
+        }
+        if (nameFound.startTimestamp < PERMAWEB_MODULE_ARNS_START_TIME) {
+          // DISQUALIFIED
+          // Name created before start time
+          undernameTooEarlyCount++;
+          console.log(
+            "      DISQUALIFIED (Undername name created before start time)"
+          );
+          await pendingToFail(dryRun, zealyUrl, data.items[i].id);
+          continue;
+        }
+
+        console.log(`      Fetching State from ANT: ${nameFound.processId}`);
+        const state = await getState(nameFound.processId);
+
+        const matchedZealyUser: any = await getUserInfo(
+          data.items[i].user.id,
+          zealyUrl
+        );
+
+        if (
+          matchedZealyUser.unVerifiedBlockchainAddresses.arweave !== state.Owner
+        ) {
+          zealyUserDoesntOwnUnderNameCount++;
+          console.log(
+            "      DISQUALIFIED (This user does not own this undername)"
+          );
+          await pendingToFail(dryRun, zealyUrl, data.items[i].id);
+          continue;
+        }
+
+        // IF UNDERNAME DOESNT EXIST
+        if (!state.Records[undername]) {
+          undernameNotFoundCount++;
+          console.log(
+            "      DISQUALIFIED (This user does did not create this undername)"
+          );
+          await pendingToFail(dryRun, zealyUrl, data.items[i].id);
+          continue;
+        }
+
+        console.log(
+          `      VALID UNDERNAME ${undername} with ArNS Name ${rootname} uploaded by ${matchedZealyUser.unVerifiedBlockchainAddresses.arweave} with Zealy ID: ${matchedZealyUser.id} `
+        );
+
+        matchedZealyUser.underName = nameFound;
+        matchedZealyUser.undernameAntState = state;
+        undernameQuesters.push(matchedZealyUser);
+
+        await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
+      } else {
+        console.log(
+          `Not pending! Undername Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        );
+      }
+    }
+    if (data.nextCursor !== null) {
+      undernameCursor = data.nextCursor;
     } else {
       break;
     }
@@ -571,6 +694,73 @@ export async function reviewUseThePermawebModule(
     }
   }
 
+  let arDriveArNSQuesters: any[] = [];
+  console.log("Processing ArDrive x ArNS Questers");
+  while (true) {
+    let response;
+    if (arDriveArNSCursor) {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${arDriveArNSQuestId}&cursor=${arDriveArNSCursor}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": prodKey },
+        }
+      );
+    } else {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${arDriveArNSQuestId}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": prodKey },
+        }
+      );
+    }
+
+    const data: any = await response.json();
+    for (let i = 0; i < data.items.length; i += 1) {
+      if (
+        data.items[i].quest.id === arDriveArNSQuestId &&
+        data.items[i].status === "pending"
+      ) {
+        const matchedZealyUser: any = await getUserInfo(
+          data.items[i].user.id,
+          zealyUrl
+        );
+
+        const arDriveArNSNameResults = await getArDriveNameTxs(
+          matchedZealyUser.unVerifiedBlockchainAddresses.arweave,
+          data.items[i].tasks[0].value // should be the right name
+        );
+
+        if (arDriveArNSNameResults.data.transactions.edges.length === 0) {
+          arDriveArNSQuesterFailedCount++;
+          console.log(
+            `      DISQUALIFIED (This user did not update their ArNS Name ${data.items[i].tasks[0].value} with ArDrive!)`
+          );
+          await pendingToFail(dryRun, zealyUrl, data.items[i].id);
+          continue;
+        } else {
+          console.log(
+            `      VALID ARDRIVE ARNS NAME ${data.items[i].tasks[0].value} for ${matchedZealyUser.unVerifiedBlockchainAddresses.arweave} with Zealy ID: ${matchedZealyUser.id} `
+          );
+
+          arDriveArNSQuesters.push(matchedZealyUser);
+          arDriveArNSQuesterCount++;
+          await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
+        }
+      } else {
+        console.log(
+          `Not pending! ArDrive ArNS Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        );
+      }
+    }
+    if (data.nextCursor !== null) {
+      arDriveArNSCursor = data.nextCursor;
+    } else {
+      break;
+    }
+  }
+
   console.log(`Total ArNS Questers: ${arnsQuesters}`);
   console.log(
     `Approved ${
@@ -580,13 +770,38 @@ export async function reviewUseThePermawebModule(
   console.log(`   Names not found: ${nameNotFoundCount}`);
   console.log(`   Name Created Too Early: ${nameTooEarlyCount}`);
   console.log(`   Mismatched Name Owner: ${zealyUserDoesntOwnNameCount}`);
+  console.log(`Total Undername Questers: ${undernameQuesterCount}`);
+  console.log(
+    `Approved ${
+      Object.keys(undernameQuesters).length
+    } successful Undername Questers`
+  );
+  console.log(`   Undername Names not found: ${undernameNameNotFoundCount}`);
+  console.log(`   Undernames not found: ${undernameNotFoundCount}`);
+  console.log(`   Undernames Created Too Early: ${undernameTooEarlyCount}`);
+  console.log(
+    `   Mismatched Undername Owner: ${zealyUserDoesntOwnUnderNameCount}`
+  );
   console.log(`Total Delegated Stake Questers: ${delegatedStakerQuesterCount}`);
   console.log(`   Total Delegated Stakers: ${delegatedStakerCount}`);
   console.log(
     `Total Bazar Questers: ${bazarQuesterCount + bazarQuesterFailedCount}`
   );
   console.log(`   Total Bazar Profile Creators: ${bazarQuesterCount}`);
-  return { arnsNameBuyers, delegatedStakers, bazarQuesters };
+  console.log(
+    `Total ArDrive x ArNS Questers: ${
+      arDriveArNSQuesterCount + arDriveArNSQuesterFailedCount
+    }`
+  );
+  console.log(
+    `   Total ArDrive x ArNS Name setters: ${arDriveArNSQuesterCount}`
+  );
+  return {
+    arnsNameBuyers,
+    delegatedStakers,
+    bazarQuesters,
+    arDriveArNSQuesters,
+  };
 }
 
 export async function reviewUseThePermawebModuleSprint10(

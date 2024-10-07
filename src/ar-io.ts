@@ -387,3 +387,75 @@ export async function getTxInformation(txId: String): Promise<any> {
     return {};
   }
 }
+
+export async function getArDriveNameTxs(
+  owner: string,
+  name: String
+): Promise<any> {
+  const query = {
+    query: `query {
+      transactions(
+        first: 100
+        owners: ["${owner}"]
+        tags: [{ name: "ArNS-Name", values: ["${name}"] }]
+      ) {
+        pageInfo {
+          hasNextPage
+        }
+        edges {
+          cursor
+          node {
+            id
+            bundledIn {
+              id
+            }
+            owner {
+              address
+            }
+            fee {
+              ar
+            }
+            quantity {
+              ar
+            }
+            tags {
+              name
+              value
+            }
+            data {
+              size
+            }
+            block {
+              height
+              timestamp
+            }
+          }
+        }
+      }
+    }`,
+  };
+
+  try {
+    const response = await fetch(`https://arweave.net/graphql`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(query),
+    });
+
+    const data = await response.json();
+
+    if (data === undefined) {
+      //console.log(response.statusText);
+      //console.log(response);
+      console.log("Undefined data returned from Gateway");
+      return {};
+    }
+    return data;
+  } catch (err) {
+    console.log(err);
+    console.log("Error getting transactions");
+    return {};
+  }
+}

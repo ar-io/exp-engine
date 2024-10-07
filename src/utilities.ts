@@ -266,3 +266,13 @@ export function chunkObject<T>(
 
   return chunks;
 }
+
+export function splitArNSName(name: string): {
+  undername: string;
+  rootname: string;
+} {
+  const parts = name.split("_");
+  const rootname = parts.pop() as string; // Last part is the rootname
+  const undername = parts.join("_"); // Remaining parts form the undername
+  return { undername, rootname };
+}

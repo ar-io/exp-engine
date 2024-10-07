@@ -7,7 +7,10 @@
   "dependencies": {
     "axios": "^0.26.0",
     "axios-retry": "^3.2.4",
+    "country-list": "^2.3.0",
     "csv-writer": "^1.6.0",
+    "geoip-lite": "^1.4.10",
+    "mathjs": "^13.2.0",
     "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1"
   },
@@ -16,6 +19,8 @@
     "@commitlint/config-conventional": "^17.7.0",
     "@permaweb/aoconnect": "^0.0.45",
     "@trivago/prettier-plugin-sort-imports": "^4.0.0",
+    "@types/country-list": "^2.1.4",
+    "@types/geoip-lite": "^1.4.4",
     "@types/jest": "^27.4.0",
     "@types/node": "^18.15.7",
     "@typescript-eslint/eslint-plugin": "^4.18.0",
@@ -55,9 +60,11 @@
     "test": "yarn run build && node ./lib/test.js",
     "send-exp-tokens": "yarn run build && node ./lib/send-exp-tokens.js",
     "send-tio-tokens": "yarn run build && node ./lib/send-tio-tokens.js",
+    "send-tio-tokens-single": "yarn run build && node ./lib/send-tio-tokens-single.js",
     "get-exp-balances": "yarn run build && node ./lib/get-exp-balances.js",
     "get-tio-balances": "yarn run build && node ./lib/get-tio-balances.js",
-    "get-dio-balances": "yarn run build && node ./lib/get-dio-balances.js"
+    "get-dio-balances": "yarn run build && node ./lib/get-dio-balances.js",
+    "get-network-details": "yarn run build && node ./lib/get-network-details.js"
   },
   "lint-staged": {
     "**/*.{ts,js,json}": [

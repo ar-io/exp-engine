@@ -16,6 +16,8 @@ export const ardriveUploadQuestId = "f2c619de-f24c-4005-866f-204158f2e323"; // m
 export const arnsNameQuestId = "9fd3daa7-434f-4579-8178-cd88e6cb3d17"; // mainnet
 export const delegatedStakeQuestId = "a83630bb-d6a4-4c89-bbe6-611945b0960e"; // mainnet
 export const bazarQuestId = "055b6f9f-448b-4259-aac1-8d1ecf96d4b9"; //mainnet
+export const undernameQuestId = "93e82e42-2d97-4a79-a9d6-e4c812fe2bdb"; //mainnet
+export const arDriveArNSQuestId = "117d5915-f7a3-45db-8b68-168b7d627323"; //mainnet
 
 // ECOSYSTEM REWARDS
 export const HISTORICAL_TEST_TOKEN_HOLDER_REWARD = 50;
