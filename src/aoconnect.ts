@@ -18,7 +18,9 @@ export async function transferEXP(
   if (dryRun) {
     return "dry run";
   } else {
-    const { message } = await connect();
+    const { message } = await connect({
+      CU_URL: AO_CU_URL,
+    });
     const result = await message({
       process: expProcessId,
       signer: createDataItemSigner(wallet),

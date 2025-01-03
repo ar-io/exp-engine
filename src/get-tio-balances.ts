@@ -1,6 +1,11 @@
+import { AO_CU_URL } from "./constants";
 import { Balances, Gateways } from "./types";
 import { saveJsonToFile } from "./utilities";
-import { dryrun } from "@permaweb/aoconnect";
+import { connect } from "@permaweb/aoconnect";
+
+const { dryrun } = connect({
+  CU_URL: AO_CU_URL,
+});
 
 async function main() {
   // console.log(`dry run results:`);
@@ -24,9 +29,10 @@ async function main() {
   const gatewaysData: Gateways = JSON.parse(gatewaysDryRead.Messages[0].Data);
 
   const totalBalances = analyzeBalances(balancesData);
-  const { totalDelegatedStake, totalOperatorStake } =
-    analyzeGateways(gatewaysData);
-  const totalSupply = totalBalances + totalDelegatedStake + totalOperatorStake;
+  // const { totalDelegatedStake, totalOperatorStake } =
+  analyzeGateways(gatewaysData);
+  // const totalSupply = totalBalances + totalDelegatedStake + totalOperatorStake;
+  const totalSupply = totalBalances + 0 + 0;
   console.log(`Total Tokens in supply: ${totalSupply / 1000000}`);
 }
 

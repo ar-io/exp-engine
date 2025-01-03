@@ -8,8 +8,8 @@ async function main() {
   // await airdropExpTokens(true, "Upgraded-AO-Gateways.json");
   // await runZealyFaucet(true, ZEALY_PROD_URL);
   // await banZealyUsers(true, ZEALY_PROD_URL);
-  // await reviewUseThePermawebModule(true, ZEALY_PROD_URL);
-  await runZealyAirdrop(true, ZEALY_PROD_URL);
+  // await reviewUseThePermawebModule(false, ZEALY_PROD_URL);
+  await runZealyAirdrop(false, ZEALY_PROD_URL);
 }
 
 main().catch(console.error);

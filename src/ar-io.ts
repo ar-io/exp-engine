@@ -5,6 +5,7 @@ import {
   DEFAULT_ARNS_DATA_POINTER,
   FAUCET_MTIO_QUANTITY,
   ZEALY_START_TIMESTAMP,
+  apusProcessId,
   testnetProcessId,
 } from "./constants";
 import { CachedRecords, FaucetRecipient, JWKInterface } from "./types";
@@ -15,7 +16,7 @@ import {
   retryFetch,
   saveJsonToFile,
 } from "./utilities";
-import { IO, ArweaveSigner, ANT, AOProcess } from "@ar.io/sdk";
+import { IO, ArweaveSigner, ANT, AOProcess, AoPrimaryName } from "@ar.io/sdk";
 import { connect } from "@permaweb/aoconnect";
 import path from "path";
 
@@ -169,6 +170,40 @@ export async function fetchCache(url: string): Promise<any> {
   }
 }
 
+export async function getPrimaryName(address: string): Promise<AoPrimaryName> {
+  let name: AoPrimaryName;
+  try {
+    const ario = IO.init();
+
+    name = await ario.getPrimaryName({
+      address,
+    });
+  } catch (err) {
+    console.log("Error getting primary name");
+    console.log(err);
+  }
+  return name;
+}
+
+export async function getPrimaryNames(): Promise<AoPrimaryName[]> {
+  let names: AoPrimaryName[];
+  try {
+    const ario = IO.init();
+
+    const result = await ario.getPrimaryNames({
+      limit: 10000,
+      sortBy: "startTimestamp",
+      sortOrder: "desc",
+    });
+
+    names = result.items;
+  } catch (err) {
+    console.log("Error getting primary name");
+    console.log(err);
+  }
+  return names;
+}
+
 // Function to fetch data from ARNS cache with error handling
 export async function getRecords(): Promise<any> {
   try {
@@ -181,6 +216,7 @@ export async function getRecords(): Promise<any> {
       }),
     });
 
+    console.log("Initialized ar.io");
     const records = await arIO.getArNSRecords({ limit: 100000 });
     return records.items;
   } catch (error) {
@@ -210,6 +246,40 @@ export async function getGateways(): Promise<any> {
   } catch (error) {
     console.error(`Error getting records:`, error.message);
     return null; // Return null to indicate a failed fetch
+  }
+}
+
+export async function hasDelegations(address: string): Promise<boolean> {
+  try {
+    const arIO = IO.init({
+      process: new AOProcess({
+        processId: testnetProcessId,
+        ao: connect({
+          CU_URL: AO_CU_URL,
+        }),
+      }),
+    });
+
+    const vaults = await arIO.getDelegations({
+      address,
+      limit: 10000,
+      sortBy: "startTimestamp",
+      sortOrder: "asc",
+    });
+
+    // Optional logging for debugging purposes
+    // console.debug("Delegations fetched:", vaults.items);
+
+    // Return true if delegations exist, otherwise false
+    return vaults.items.length > 0;
+  } catch (error) {
+    console.error(
+      `Error fetching delegations for address ${address}:`,
+      error.message
+    );
+
+    // Return false if an error occurs
+    return false;
   }
 }
 
@@ -398,6 +468,75 @@ export async function getArDriveNameTxs(
         first: 100
         owners: ["${owner}"]
         tags: [{ name: "ArNS-Name", values: ["${name}"] }]
+      ) {
+        pageInfo {
+          hasNextPage
+        }
+        edges {
+          cursor
+          node {
+            id
+            bundledIn {
+              id
+            }
+            owner {
+              address
+            }
+            fee {
+              ar
+            }
+            quantity {
+              ar
+            }
+            tags {
+              name
+              value
+            }
+            data {
+              size
+            }
+            block {
+              height
+              timestamp
+            }
+          }
+        }
+      }
+    }`,
+  };
+
+  try {
+    const response = await fetch(`https://arweave.net/graphql`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(query),
+    });
+
+    const data = await response.json();
+
+    if (data === undefined) {
+      //console.log(response.statusText);
+      //console.log(response);
+      console.log("Undefined data returned from Gateway");
+      return {};
+    }
+    return data;
+  } catch (err) {
+    console.log(err);
+    console.log("Error getting transactions");
+    return {};
+  }
+}
+
+export async function getApusMessages(owner: string): Promise<any> {
+  const query = {
+    query: `query {
+      transactions(
+        first: 100
+        owners: ["${owner}"]
+        recipients: ["${apusProcessId}"]
       ) {
         pageInfo {
           hasNextPage

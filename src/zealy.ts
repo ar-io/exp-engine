@@ -1,11 +1,13 @@
 import { chunkAndLoadBalances } from "./aoconnect";
 import { devKey, prodKey } from "./apikeys";
 import {
+  getApusMessages,
   getArDriveNameTxs,
-  getGateways,
+  getPrimaryNames,
   getRecords,
   getState,
   getTxInformation,
+  hasDelegations,
   transferTestTokens,
 } from "./ar-io";
 import { getProfilesByWalletAddresses } from "./bazar-profiles";
@@ -16,6 +18,7 @@ import {
   PERMAWEB_MODULE_ARDRIVE_START_TIME,
   PERMAWEB_MODULE_ARNS_START_TIME,
   ZEALY_DEV_URL,
+  apusQuestId,
   arDriveArNSQuestId,
   ardriveUploadQuestId,
   arnsNameQuestId,
@@ -23,6 +26,7 @@ import {
   delegatedStakeQuestId,
   faucetQuestId,
   honeyPotQuestId,
+  primaryNameQuestId,
   undernameQuestId,
 } from "./constants";
 import { AirdropList, Balances, FaucetRecipient } from "./types";
@@ -309,25 +313,6 @@ export function extractNameFromUrl(input: string): string {
   return match ? match[1] : input;
 }
 
-/**
- * Checks if an Arweave wallet is a delegate in any gateway.
- *
- * @param walletAddress The Arweave wallet address to check.
- * @param registry The state of the gateway address registry.
- * @returns True if the wallet is a delegate in any gateway, false otherwise.
- */
-function isDelegate(walletAddress: string, registry: any): boolean {
-  for (const gateway in registry) {
-    if (registry.hasOwnProperty(gateway)) {
-      const delegates = registry[gateway].delegates;
-      if (walletAddress in delegates) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 export async function reviewUseThePermawebModule(
   dryRun: boolean = true,
   zealyUrl: string
@@ -338,7 +323,11 @@ export async function reviewUseThePermawebModule(
   let arnsQuesters = 0;
   let delegatedStakeCursor;
   let bazarCursor;
+  let primaryNameCursor;
   let arDriveArNSCursor;
+  let apusCursor;
+  let apusMessageNotFoundCount = 0;
+  let primaryNameNotFoundCount = 0;
   let undernameNotFoundCount = 0;
   let undernameNameNotFoundCount = 0;
   let nameNotFoundCount = 0;
@@ -349,6 +338,8 @@ export async function reviewUseThePermawebModule(
   let delegatedStakerQuesterCount = 0;
   let bazarQuesterCount = 0;
   let bazarQuesterFailedCount = 0;
+  let apusQuesterCount = 0;
+  let primaryNameQuesterCount = 0;
   let arDriveArNSQuesterCount = 0;
   let arDriveArNSQuesterFailedCount = 0;
   let delegatedStakerCount = 0;
@@ -357,9 +348,8 @@ export async function reviewUseThePermawebModule(
   // const zealyUsers: any = await getLeaderboard(zealyUrl);
 
   // get all ArNS Records
+  console.log("Getting all ArNS Records");
   const records = await getRecords();
-
-  const gateways = await getGateways();
 
   // console.log(`Got ${Object.keys(records).length} ArNS names`);
 
@@ -405,7 +395,9 @@ export async function reviewUseThePermawebModule(
           await pendingToFail(dryRun, zealyUrl, data.items[i].id);
           continue;
         }
-        if (nameFound.startTimestamp < PERMAWEB_MODULE_ARNS_START_TIME) {
+
+        // No longer need to check start time for name
+        /*if (nameFound.startTimestamp < PERMAWEB_MODULE_ARNS_START_TIME) {
           // DISQUALIFIED
           // Name created before start time
           nameTooEarlyCount++;
@@ -414,7 +406,7 @@ export async function reviewUseThePermawebModule(
           );
           await pendingToFail(dryRun, zealyUrl, data.items[i].id);
           continue;
-        }
+        }*/
 
         console.log(`      Fetching State from ANT: ${nameFound.processId}`);
         const state = await getState(nameFound.processId);
@@ -443,9 +435,9 @@ export async function reviewUseThePermawebModule(
 
         await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
       } else {
-        console.log(
-          `Not pending! ArNS Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
-        );
+        //console.log(
+        //  `Not pending! ArNS Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        //);
       }
     }
     if (data.nextCursor !== null) {
@@ -503,7 +495,9 @@ export async function reviewUseThePermawebModule(
           await pendingToFail(dryRun, zealyUrl, data.items[i].id);
           continue;
         }
-        if (nameFound.startTimestamp < PERMAWEB_MODULE_ARNS_START_TIME) {
+
+        // Removing the rule for ensuring a name is too old.
+        /*if (nameFound.startTimestamp < PERMAWEB_MODULE_ARNS_START_TIME) {
           // DISQUALIFIED
           // Name created before start time
           undernameTooEarlyCount++;
@@ -512,7 +506,7 @@ export async function reviewUseThePermawebModule(
           );
           await pendingToFail(dryRun, zealyUrl, data.items[i].id);
           continue;
-        }
+        }*/
 
         console.log(`      Fetching State from ANT: ${nameFound.processId}`);
         const state = await getState(nameFound.processId);
@@ -537,7 +531,7 @@ export async function reviewUseThePermawebModule(
         if (!state.Records[undername]) {
           undernameNotFoundCount++;
           console.log(
-            "      DISQUALIFIED (This user does did not create this undername)"
+            `      DISQUALIFIED (This undername was not found: ${name})`
           );
           await pendingToFail(dryRun, zealyUrl, data.items[i].id);
           continue;
@@ -553,9 +547,9 @@ export async function reviewUseThePermawebModule(
 
         await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
       } else {
-        console.log(
-          `Not pending! Undername Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
-        );
+        //console.log(
+        //  `Not pending! Undername Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        //);
       }
     }
     if (data.nextCursor !== null) {
@@ -599,12 +593,10 @@ export async function reviewUseThePermawebModule(
           zealyUrl
         );
 
-        if (
-          !isDelegate(
-            matchedZealyUser.unVerifiedBlockchainAddresses.arweave,
-            gateways
-          )
-        ) {
+        const delegatedStaker = await hasDelegations(
+          matchedZealyUser.unVerifiedBlockchainAddresses.arweave
+        );
+        if (delegatedStaker === false) {
           zealyUserDoesntOwnNameCount++;
           console.log("      DISQUALIFIED (This user did not delegate stake)");
           await pendingToFail(dryRun, zealyUrl, data.items[i].id);
@@ -619,9 +611,9 @@ export async function reviewUseThePermawebModule(
           await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
         }
       } else {
-        console.log(
-          `Not pending! Delegated Stake Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
-        );
+        //console.log(
+        //  `Not pending! Delegated Stake Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        //);
       }
     }
     if (data.nextCursor !== null) {
@@ -682,9 +674,9 @@ export async function reviewUseThePermawebModule(
           await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
         }
       } else {
-        console.log(
-          `Not pending! Bazar Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
-        );
+        //console.log(
+        //  `Not pending! Bazar Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        //);
       }
     }
     if (data.nextCursor !== null) {
@@ -732,7 +724,10 @@ export async function reviewUseThePermawebModule(
           data.items[i].tasks[0].value // should be the right name
         );
 
-        if (arDriveArNSNameResults.data.transactions.edges.length === 0) {
+        if (
+          arDriveArNSNameResults.data &&
+          arDriveArNSNameResults.data.transactions.edges.length === 0
+        ) {
           arDriveArNSQuesterFailedCount++;
           console.log(
             `      DISQUALIFIED (This user did not update their ArNS Name ${data.items[i].tasks[0].value} with ArDrive!)`
@@ -749,13 +744,149 @@ export async function reviewUseThePermawebModule(
           await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
         }
       } else {
-        console.log(
-          `Not pending! ArDrive ArNS Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
-        );
+        //console.log(
+        //  `Not pending! ArDrive ArNS Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        //);
       }
     }
     if (data.nextCursor !== null) {
       arDriveArNSCursor = data.nextCursor;
+    } else {
+      break;
+    }
+  }
+
+  let primaryNameQuesters: any[] = [];
+  const names = await getPrimaryNames();
+
+  console.log("Processing Primary Name Questers");
+  while (true && names.length > 0) {
+    let response;
+    if (primaryNameCursor) {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${primaryNameQuestId}&cursor=${primaryNameCursor}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": prodKey },
+        }
+      );
+    } else {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${primaryNameQuestId}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": prodKey },
+        }
+      );
+    }
+
+    const data: any = await response.json();
+    for (let i = 0; i < data.items.length; i += 1) {
+      if (
+        data.items[i].quest.id === primaryNameQuestId &&
+        data.items[i].status === "pending"
+      ) {
+        const matchedZealyUser: any = await getUserInfo(
+          data.items[i].user.id,
+          zealyUrl
+        );
+
+        const matchingName = names.find(
+          (name) =>
+            name.owner ===
+            matchedZealyUser.unVerifiedBlockchainAddresses.arweave
+        );
+
+        if (!matchingName) {
+          primaryNameNotFoundCount++;
+          console.log(
+            `      DISQUALIFIED (This user ${matchedZealyUser.unVerifiedBlockchainAddresses.arweave} did set their primary ArNS Name ${data.items[i].tasks[0].value}!)`
+          );
+          await pendingToFail(dryRun, zealyUrl, data.items[i].id);
+          continue;
+        } else {
+          console.log(
+            `      VALID PRIMARY NAME ${data.items[i].tasks[0].value} for ${matchedZealyUser.unVerifiedBlockchainAddresses.arweave} with Zealy ID: ${matchedZealyUser.id} `
+          );
+
+          primaryNameQuesters.push(matchedZealyUser);
+          primaryNameQuesterCount++;
+          await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
+        }
+      } else {
+        console.log(
+          `Not pending! Primary Name Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        );
+      }
+    }
+    if (data.nextCursor !== null) {
+      primaryNameCursor = data.nextCursor;
+    } else {
+      break;
+    }
+  }
+
+  let apusQuesters: any[] = [];
+  console.log("Processing Apus Questers");
+  while (true) {
+    let response;
+    if (apusCursor) {
+      response = await fetch(
+        `${zealyUrl}/reviews?questId=${apusQuestId}&cursor=${apusCursor}`,
+        {
+          method: "GET",
+          headers: { "x-api-key": prodKey },
+        }
+      );
+    } else {
+      response = await fetch(`${zealyUrl}/reviews?questId=${apusQuestId}`, {
+        method: "GET",
+        headers: { "x-api-key": prodKey },
+      });
+    }
+
+    const data: any = await response.json();
+    for (let i = 0; i < data.items.length; i += 1) {
+      if (
+        data.items[i].quest.id === apusQuestId &&
+        data.items[i].status === "pending"
+      ) {
+        const matchedZealyUser: any = await getUserInfo(
+          data.items[i].user.id,
+          zealyUrl
+        );
+
+        const apusMessageResults = await getApusMessages(
+          matchedZealyUser.unVerifiedBlockchainAddresses.arweave
+        );
+
+        if (
+          apusMessageResults.data &&
+          apusMessageResults.data.transactions.edges.length === 0
+        ) {
+          apusMessageNotFoundCount++;
+          console.log(
+            `      DISQUALIFIED (This user ${matchedZealyUser.unVerifiedBlockchainAddresses.arweave} did not message Apus)`
+          );
+          // await pendingToFail(dryRun, zealyUrl, data.items[i].id);
+          continue;
+        } else {
+          console.log(
+            `      VALID APUS MESSAGE for ${matchedZealyUser.unVerifiedBlockchainAddresses.arweave} with Zealy ID: ${matchedZealyUser.id} `
+          );
+
+          apusQuesters.push(matchedZealyUser);
+          apusQuesterCount++;
+          // await pendingToSuccess(dryRun, zealyUrl, data.items[i].id);
+        }
+      } else {
+        //console.log(
+        //  `Not pending! ArDrive ArNS Quest Status: ${data.items[i].status} for Zealy ID: ${data.items[i].user.id}`
+        //);
+      }
+    }
+    if (data.nextCursor !== null) {
+      apusCursor = data.nextCursor;
     } else {
       break;
     }
@@ -796,11 +927,23 @@ export async function reviewUseThePermawebModule(
   console.log(
     `   Total ArDrive x ArNS Name setters: ${arDriveArNSQuesterCount}`
   );
+  console.log(
+    `Total Primary Name Questers: ${
+      primaryNameQuesterCount + primaryNameNotFoundCount
+    }`
+  );
+  console.log(`   Total Primary Name setters: ${primaryNameQuesterCount}`);
+  console.log(
+    `Total Apus Questers: ${apusQuesterCount + apusMessageNotFoundCount}`
+  );
+  console.log(`   Total Apus messagers: ${apusQuesterCount}`);
   return {
     arnsNameBuyers,
     delegatedStakers,
     bazarQuesters,
     arDriveArNSQuesters,
+    primaryNameQuesters,
+    apusQuesters,
   };
 }
 

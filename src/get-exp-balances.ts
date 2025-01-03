@@ -1,9 +1,9 @@
-import { AO_CU_URL, expProcessId } from "./constants";
+import { expProcessId } from "./constants";
 import { saveJsonToFile } from "./utilities";
 import { connect } from "@permaweb/aoconnect";
 
 const { dryrun } = connect({
-  CU_URL: AO_CU_URL,
+  CU_URL: `https://vilenarios.com/ao/cu`,
 });
 
 async function main() {
@@ -68,19 +68,23 @@ async function main() {
   // Categorize balances into ranges
   const ranges = {
     "0": 0,
-    "1-25M": 0,
+    "1-10M": 0,
+    "10-25M": 0,
     "25M-50M": 0,
     "50M-100M": 0,
     "100M-150M": 0,
     "150M-200M": 0,
-    "200M+": 0,
+    "200M-1B": 0,
+    "1B+": 0,
   };
 
   balances.forEach((balance) => {
     if (balance === 0) {
       ranges["0"]++;
+    } else if (balance <= 10000000) {
+      ranges["1-10M"]++;
     } else if (balance <= 25000000) {
-      ranges["1-25M"]++;
+      ranges["10-25M"]++;
     } else if (balance <= 50000000) {
       ranges["25M-50M"]++;
     } else if (balance <= 100000000) {
@@ -89,11 +93,14 @@ async function main() {
       ranges["100M-150M"]++;
     } else if (balance <= 200000000) {
       ranges["150M-200M"]++;
+    } else if (balance <= 1000000000) {
+      ranges["200M-1B"]++;
     } else {
-      ranges["200M+"]++;
+      ranges["1B+"]++;
     }
   });
 
+  console.log("Total Supply: ", totalBalance);
   // Generate the report
   const report = `
 Timestamp: ${currentTimestamp}
@@ -101,19 +108,21 @@ Balance Report:
 ---------------
 Total Balance Holders: ${totalBalanceHolders}
 Non-Zero Balance Holders: ${nonZeroBalanceHolders}
-Total Balance: ${totalBalance / 1_000_000 || 0}
+Total Balance: ${totalBalance || 0}
 Average Balance: ${averageBalance / 1_000_000 || 0}
 Minimum Balance: ${minBalance / 1_000_000 || 0}
 Maximum Balance: ${maxBalance / 1_000_000 || 0}
 
 Balance Distribution:
 0: ${ranges["0"]}
-1-25M: ${ranges["1-25M"]}
+1-10M: ${ranges["1-10M"]}
+10-25M: ${ranges["10-25M"]}
 25-50M: ${ranges["25M-50M"]}
 50M-100M: ${ranges["50M-100M"]}
 100M-150M: ${ranges["100M-150M"]}
 150M-200M: ${ranges["150M-200M"]}
-200M+: ${ranges["200M+"]}
+200M+: ${ranges["200M-1B"]}
+1B+: ${ranges["1B+"]}
 `;
 
   console.log(report);

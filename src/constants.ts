@@ -6,7 +6,8 @@ export const MINT_DELAY = 50; // 100 ms delay for minting
 export const testExpProcessId = "mbGcJfiMXhHAX2-TBYGjonztCdGY1GEuQ66Wt3AINZI"; // testnet
 export const expProcessId = "aYrCboXVSl1AXL9gPFe3tfRxRf0ZmkOXH65mKT0HHZw"; // mainnet
 export const testnetProcessId = "agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA";
-export const AO_CU_URL = "https://cu.ar-io.dev";
+// export const AO_CU_URL = "https://cu.ar-io.dev";
+export const AO_CU_URL = "https://vilenarios.com/ao/cu";
 export const honeyPotQuestId = "5cdb7119-5407-460c-baa6-c37f225147ea";
 export const faucetQuestId = "3e77d5ef-f34d-4d4d-963d-4569a1a28511"; //
 // export const faucetQuestId = "39c0c984-e325-40d6-bec6-7e3a6646fd92"; testnet
@@ -18,6 +19,9 @@ export const delegatedStakeQuestId = "a83630bb-d6a4-4c89-bbe6-611945b0960e"; // 
 export const bazarQuestId = "055b6f9f-448b-4259-aac1-8d1ecf96d4b9"; //mainnet
 export const undernameQuestId = "93e82e42-2d97-4a79-a9d6-e4c812fe2bdb"; //mainnet
 export const arDriveArNSQuestId = "117d5915-f7a3-45db-8b68-168b7d627323"; //mainnet
+export const primaryNameQuestId = "54522363-e646-440e-80ad-9e52a1c3ca53"; //mainnet
+export const apusQuestId = "8e8d5770-111d-49a5-9681-ab61d7cb45bb"; //mainnet
+export const apusProcessId = "q7QJTZbOI_avjaltnF-kP21kpL3qCs8sJSP6Wdl9wzM"; //"HJV6BxQGakxlQe6rfGxOMiifKSFYRz5WEwZOKPLPWEg"; //mainnet
 
 // ECOSYSTEM REWARDS
 export const HISTORICAL_TEST_TOKEN_HOLDER_REWARD = 50;

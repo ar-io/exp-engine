@@ -15,7 +15,7 @@
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "@ar.io/sdk": "^2.0.2",
+    "@ar.io/sdk": "^2.5.5",
     "@commitlint/config-conventional": "^17.7.0",
     "@permaweb/aoconnect": "^0.0.45",
     "@trivago/prettier-plugin-sort-imports": "^4.0.0",
@@ -23,8 +23,6 @@
     "@types/geoip-lite": "^1.4.4",
     "@types/jest": "^27.4.0",
     "@types/node": "^18.15.7",
-    "@typescript-eslint/eslint-plugin": "^4.18.0",
-    "@typescript-eslint/parser": "^6.18.1",
     "ajv": "^8.12.0",
     "commitlint": "^18.2.0",
     "copyfiles": "^2.4.0",
@@ -59,6 +57,7 @@
     "start": "yarn run build && node ./lib/index.js",
     "test": "yarn run build && node ./lib/test.js",
     "send-exp-tokens": "yarn run build && node ./lib/send-exp-tokens.js",
+    "send-exp-tokens-bulk": "yarn run build && node ./lib/send-exp-tokens-bulk.js",
     "send-tio-tokens": "yarn run build && node ./lib/send-tio-tokens.js",
     "send-tio-tokens-single": "yarn run build && node ./lib/send-tio-tokens-single.js",
     "get-exp-balances": "yarn run build && node ./lib/get-exp-balances.js",
