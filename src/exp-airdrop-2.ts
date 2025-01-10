@@ -1,18 +1,24 @@
-import { IO, ANT } from "@ar.io/sdk";
-import { connect } from "@permaweb/aoconnect";
+import { testnetProcessId } from "./constants";
+import { IO, ANT, AOProcess } from "@ar.io/sdk";
+import { connect, dryrun } from "@permaweb/aoconnect";
 import { createObjectCsvWriter } from "csv-writer";
-
-const { dryrun } = connect({
-  CU_URL: "https://cu.ardrive.io",
-});
 
 type UserScore = {
   address: string;
   score: number;
+  categories: string[];
 };
 
-const ario = IO.init();
+export const ario = IO.init({
+  process: new AOProcess({
+    processId: testnetProcessId,
+    ao: connect({
+      CU_URL: "https://cu.ardrive.io",
+    }),
+  }),
+});
 
+const NAMES_TO_PROCESS = 5000;
 // Define scoring rules
 const scoringRules: { [key: string]: number } = {
   hasArNSName: 100,
@@ -46,32 +52,32 @@ const tokenRequirements: {
     ticker: "tARIO",
   }, // tARIO
   {
-    process: "m3PawlzK4PTG9lAaqYQPaPDcXdO8hYqi5Fe9NWqXd0w",
+    process: "m3PaWzK4PTG9lAaqYQPaPdOcXdO8hYqi5Fe9NWqXd0w",
     minimum: 1,
     ticker: "AO",
-  }, // AO
+  }, // AO - DOESNT WORK
+  //{
+  //  process: "DM3FoZUq_yebASPhgd8pEIRIzDW6muXEhxz5-JwbZwo",
+  //  minimum: 1,
+  //  ticker: "PIXL",
+  //}, // PIXL
   {
-    process: "DM3FoZUq_yebASPhdg8pEIRIzDW6muXEhxz5-JwbZwo",
-    minimum: 1,
-    ticker: "PIXL",
-  }, // PIXL
-  {
-    process: "wOrb8b_V8QixWyXZub48Ki5B6OIDyF_p1ngoonsaRpQ",
+    process: "wOrb8b_V8QixWyXZub48Ki5B6OIDyf_p1ngoonsaRpQ",
     minimum: 1,
     ticker: "TRUNK",
   }, // TRUNK
   {
-    process: "xU9zFkq3X2ZQ6o1wNVvr1vUWljc3kXTWr7xKQD6dh10",
+    process: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
     minimum: 1,
     ticker: "wAR",
   }, // wAR
   {
-    process: "NG-01VX882MG5hnARrSzyprEKejeonHpdUmaaMPsHE8",
+    process: "NG-0lVX882MG5nhARrSzyprEK6ejonHpdUmaaMPsHE8",
     minimum: 1,
     ticker: "qAR",
   }, // qAR
   {
-    process: "rH_-7vT_IgFfWDiSrcTghIhb9aRclz7lXcK7RCOV2h8",
+    process: "rH_-7vT_IgfFWiDsrcTghIhb9aRclz7lXcK7RCOV2h8",
     minimum: 1,
     ticker: "CBC",
   }, // Cyberbeaver CBC
@@ -81,6 +87,52 @@ const tokenRequirements: {
     ticker: "LLAMA",
   }, // Llama Land LLAMA
 ];
+
+// Function to calculate points based on wallet age
+function calculateAgePoints(firstTransactionTimestamp: number): number {
+  const currentTime = Date.now() / 1000; // Current time in seconds
+  const walletAgeInYears =
+    (currentTime - firstTransactionTimestamp) / (365 * 24 * 60 * 60);
+  const maxPoints = 1500; // Maximum points for the oldest wallets
+  return Math.min(maxPoints, Math.floor(300 * Math.log2(walletAgeInYears + 1))); // Scaled log2 growth
+}
+
+// Fetch first transaction timestamp using GraphQL
+async function fetchFirstTransactionTimestamp(
+  address: string
+): Promise<number | null> {
+  const query = `
+    query {
+      transactions(owners: ["${address}"], first: 1, sort: HEIGHT_ASC) {
+        edges {
+          node {
+            block {
+              timestamp
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    // const response = await fetch("https://arweave-search.goldsky.com/graphql", {
+    const response = await fetch("https://arweave.net/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+
+    const result: any = await response.json();
+
+    const timestamp =
+      result?.data?.transactions?.edges[0]?.node?.block?.timestamp;
+    return timestamp ? parseInt(timestamp, 10) : null;
+  } catch (error) {
+    console.error(`Error fetching first transaction for ${address}:`, error);
+    return null;
+  }
+}
 
 // Fetch all ArNS records
 async function fetchArNSRecords() {
@@ -177,18 +229,18 @@ async function fetchTokenBalances(): Promise<Set<string>> {
 
     try {
       const balancesDryRead = await dryrun({
-        process,
+        process: process,
         tags: [{ name: "Action", value: "Balances" }],
       });
 
-      console.log(balancesDryRead);
-
-      const balancesData: Record<string, number> = JSON.parse(
+      const balancesData: Record<string, number | string> = JSON.parse(
         balancesDryRead.Messages[0].Data
       );
 
       for (const [address, balance] of Object.entries(balancesData)) {
-        if (balance >= minimum) {
+        const numericBalance =
+          typeof balance === "string" ? parseFloat(balance) : balance;
+        if (numericBalance >= minimum) {
           holders.add(address);
         }
       }
@@ -203,17 +255,14 @@ async function fetchTokenBalances(): Promise<Set<string>> {
 // Process records and tally scores
 async function tallyScores(
   records: any[],
-  tokenHolders: Set<string>
+  tokenHolders: Set<string>,
+  gateways: any[],
+  primaryNames: Record<string, string>
 ): Promise<UserScore[]> {
-  const userScores: { [address: string]: number } = {};
+  const userScores: {
+    [address: string]: { score: number; categories: Set<string> };
+  } = {};
   const userDelegations: { [address: string]: Set<string> } = {};
-
-  for (const holder of tokenHolders) {
-    console.log(`- Adding score for holdsToken for address: ${holder}`);
-    userScores[holder] = (userScores[holder] || 0) + scoringRules.holdsToken;
-  }
-  const primaryNames = await fetchPrimaryNames();
-  const gateways = await fetchGateways();
 
   // Process gateway and delegate data
   for (const gateway of gateways) {
@@ -222,43 +271,71 @@ async function tallyScores(
     console.log(`Processing gateway for owner: ${gatewayAddress}`);
 
     if (gateway) {
-      console.log(`- Adding score for hasNetworkedGateway`);
-      userScores[gatewayAddress] =
-        (userScores[gatewayAddress] || 0) + scoringRules.hasNetworkedGateway;
+      if (!userScores[gatewayAddress]) {
+        userScores[gatewayAddress] = { score: 0, categories: new Set() };
+      }
+      if (!userScores[gatewayAddress].categories.has("hasNetworkedGateway")) {
+        console.log(`- Adding score for hasNetworkedGateway`);
+        userScores[gatewayAddress].score += scoringRules.hasNetworkedGateway;
+        userScores[gatewayAddress].categories.add("hasNetworkedGateway");
+      }
     }
 
     if (performance?.highEpochs > 100) {
-      console.log(`- Adding score for participatedHighPerformance`);
-      userScores[gatewayAddress] =
-        (userScores[gatewayAddress] || 0) +
-        scoringRules.participatedHighPerformance;
+      if (
+        !userScores[gatewayAddress].categories.has(
+          "participatedHighPerformance"
+        )
+      ) {
+        console.log(`- Adding score for participatedHighPerformance`);
+        userScores[gatewayAddress].score +=
+          scoringRules.participatedHighPerformance;
+        userScores[gatewayAddress].categories.add(
+          "participatedHighPerformance"
+        );
+      }
     }
 
     if (performance?.mediumEpochs > 50) {
-      console.log(`- Adding score for participatedMediumPerformance`);
-      userScores[gatewayAddress] =
-        (userScores[gatewayAddress] || 0) +
-        scoringRules.participatedMediumPerformance;
+      if (
+        !userScores[gatewayAddress].categories.has(
+          "participatedMediumPerformance"
+        )
+      ) {
+        console.log(`- Adding score for participatedMediumPerformance`);
+        userScores[gatewayAddress].score +=
+          scoringRules.participatedMediumPerformance;
+        userScores[gatewayAddress].categories.add(
+          "participatedMediumPerformance"
+        );
+      }
     }
 
     if (note) {
-      console.log(note);
-      console.log(`- Adding score for customizedGatewayNote`);
-      userScores[gatewayAddress] =
-        (userScores[gatewayAddress] || 0) + scoringRules.customizedGatewayNote;
+      if (!userScores[gatewayAddress].categories.has("customizedGatewayNote")) {
+        console.log(`- Adding score for customizedGatewayNote`);
+        userScores[gatewayAddress].score += scoringRules.customizedGatewayNote;
+        userScores[gatewayAddress].categories.add("customizedGatewayNote");
+      }
     }
 
     if (delegates?.length > 0) {
-      console.log(`- Adding score for gatewayHasDelegates`);
-      userScores[gatewayAddress] =
-        (userScores[gatewayAddress] || 0) + scoringRules.gatewayHasDelegates;
+      if (!userScores[gatewayAddress].categories.has("gatewayHasDelegates")) {
+        console.log(`- Adding score for gatewayHasDelegates`);
+        userScores[gatewayAddress].score += scoringRules.gatewayHasDelegates;
+        userScores[gatewayAddress].categories.add("gatewayHasDelegates");
+      }
     }
 
     if (delegates?.length >= 10) {
-      console.log(`- Adding score for gatewayHasManyDelegates`);
-      userScores[gatewayAddress] =
-        (userScores[gatewayAddress] || 0) +
-        scoringRules.gatewayHasManyDelegates;
+      if (
+        !userScores[gatewayAddress].categories.has("gatewayHasManyDelegates")
+      ) {
+        console.log(`- Adding score for gatewayHasManyDelegates`);
+        userScores[gatewayAddress].score +=
+          scoringRules.gatewayHasManyDelegates;
+        userScores[gatewayAddress].categories.add("gatewayHasManyDelegates");
+      }
     }
 
     const delegations = await fetchDelegations(gatewayAddress);
@@ -270,9 +347,14 @@ async function tallyScores(
       );
 
       if (delegatedStake > 0) {
-        console.log(`- Adding score for delegatedStakeToOne`);
-        userScores[address] =
-          (userScores[address] || 0) + scoringRules.delegatedStakeToOne;
+        if (!userScores[address]) {
+          userScores[address] = { score: 0, categories: new Set() };
+        }
+        if (!userScores[address].categories.has("delegatedStakeToOne")) {
+          console.log(`- Adding score for delegatedStakeToOne`);
+          userScores[address].score += scoringRules.delegatedStakeToOne;
+          userScores[address].categories.add("delegatedStakeToOne");
+        }
 
         // Track delegations for the user
         if (!userDelegations[address]) {
@@ -285,102 +367,189 @@ async function tallyScores(
 
   // Add scores for delegating to multiple gateways
   for (const [address, gatewaySet] of Object.entries(userDelegations)) {
-    if (gatewaySet.size > 1) {
-      console.log(
-        `- Adding score for delegatedStakeToMany for user: ${address}`
-      );
-      userScores[address] =
-        (userScores[address] || 0) + scoringRules.delegatedStakeToMany;
+    if (gatewaySet.size > 5) {
+      if (!userScores[address].categories.has("delegatedStakeToMany")) {
+        console.log(
+          `- Adding score for delegatedStakeToMany for user: ${address}`
+        );
+        userScores[address].score += scoringRules.delegatedStakeToMany;
+        userScores[address].categories.add("delegatedStakeToMany");
+      }
+    }
+  }
+
+  for (const holder of tokenHolders) {
+    console.log(`- Adding score for holdsToken for address: ${holder}`);
+    if (!userScores[holder]) {
+      userScores[holder] = { score: 0, categories: new Set() };
+    }
+    if (!userScores[holder].categories.has("holdsToken")) {
+      userScores[holder].score += scoringRules.holdsToken;
+      userScores[holder].categories.add("holdsToken");
     }
   }
 
   // Calculate scores for primary names
   for (const [owner, primaryName] of Object.entries(primaryNames)) {
     if (primaryName) {
-      console.log(`- Adding score for setPrimaryName for owner: ${owner}`);
-      userScores[owner] =
-        (userScores[owner] || 0) + scoringRules.setPrimaryName;
+      if (!userScores[owner]) {
+        userScores[owner] = { score: 0, categories: new Set() };
+      }
+      if (!userScores[owner].categories.has("setPrimaryName")) {
+        console.log(`- Adding score for setPrimaryName for owner: ${owner}`);
+        userScores[owner].score += scoringRules.setPrimaryName;
+        userScores[owner].categories.add("setPrimaryName");
+      }
     }
   }
 
   // Process ArNS records
+  let i = 0;
   for (const record of records) {
     const { name, processId } = record;
 
     console.log(`Processing record for ${name} with process ID: ${processId}`);
 
-    const ant = ANT.init({ processId });
-    const antState = await ant.getState();
+    try {
+      const ant = ANT.init({
+        process: new AOProcess({
+          processId,
+          ao: connect({
+            CU_URL: "https://cu.ardrive.io",
+          }),
+        }),
+      });
 
-    if (antState?.Owner) {
-      const owner = antState.Owner;
+      const antState = await ant.getState();
 
-      if (name) {
-        console.log(`- Adding score for hasArNSName for owner: ${owner}`);
-        userScores[owner] = (userScores[owner] || 0) + scoringRules.hasArNSName;
+      if (antState?.Owner) {
+        const owner = antState.Owner;
+
+        if (name) {
+          if (!userScores[owner]) {
+            userScores[owner] = { score: 0, categories: new Set() };
+          }
+          if (!userScores[owner].categories.has("hasArNSName")) {
+            console.log(`- Adding score for hasArNSName for owner: ${owner}`);
+            userScores[owner].score += scoringRules.hasArNSName;
+            userScores[owner].categories.add("hasArNSName");
+          }
+        }
+
+        if (
+          antState?.Records?.["@"] &&
+          antState?.Records?.["@"].transactionId !==
+            "-k7t8xMoB8hW482609Z9F4bTFMC3MnuW8bTvTyT8pFI"
+        ) {
+          if (!userScores[owner].categories.has("hasActiveArNSName")) {
+            console.log(
+              `- Adding score for hasActiveArNSName for owner: ${owner}`
+            );
+            userScores[owner].score += scoringRules.hasActiveArNSName;
+            userScores[owner].categories.add("hasActiveArNSName");
+          }
+        }
+
+        if (antState?.Records && Object.keys(antState.Records).length > 1) {
+          if (!userScores[owner].categories.has("hasUndernames")) {
+            console.log(`- Adding score for hasUndernames for owner: ${owner}`);
+            userScores[owner].score += scoringRules.hasUndernames;
+            userScores[owner].categories.add("hasUndernames");
+          }
+        }
+
+        if (
+          antState?.Logo &&
+          antState.Logo !== "Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A"
+        ) {
+          if (!userScores[owner].categories.has("setCustomLogo")) {
+            console.log(`- Adding score for setCustomLogo for owner: ${owner}`);
+            userScores[owner].score += scoringRules.setCustomLogo;
+            userScores[owner].categories.add("setCustomLogo");
+          }
+        }
+
+        if (antState?.Controllers?.length > 0) {
+          if (!userScores[owner].categories.has("setANTController")) {
+            console.log(
+              `- Adding score for setANTController for owner: ${owner}`
+            );
+            userScores[owner].score += scoringRules.setANTController;
+            userScores[owner].categories.add("setANTController");
+          }
+        }
+
+        if (antState?.Description) {
+          if (!userScores[owner].categories.has("setDescription")) {
+            console.log(
+              `- Adding score for setDescription for owner: ${owner}`
+            );
+            userScores[owner].score += scoringRules.setDescription;
+            userScores[owner].categories.add("setDescription");
+          }
+        }
+
+        if (antState?.Keywords?.length > 0) {
+          if (!userScores[owner].categories.has("setKeywords")) {
+            console.log(`- Adding score for setKeywords for owner: ${owner}`);
+            userScores[owner].score += scoringRules.setKeywords;
+            userScores[owner].categories.add("setKeywords");
+          }
+        }
       }
+    } catch (err) {
+      console.log(err);
+    }
+    i++;
+    if (i > NAMES_TO_PROCESS) {
+      break;
+    }
+  }
 
-      if (
-        antState?.Records?.["@"] &&
-        antState?.Records?.["@"].transactionId !==
-          "-k7t8xMoB8hW482609Z9F4bTFMC3MnuW8bTvTyT8pFI"
-      ) {
-        console.log(`- Adding score for hasActiveArNSName for owner: ${owner}`);
-        userScores[owner] =
-          (userScores[owner] || 0) + scoringRules.hasActiveArNSName;
-      }
+  // Provide bonus for older wallets
+  for (const address of Object.keys(userScores)) {
+    const firstTransactionTimestamp = await fetchFirstTransactionTimestamp(
+      address
+    );
 
-      if (antState?.Records && Object.keys(antState.Records).length > 1) {
-        console.log(`- Adding score for hasUndernames for owner: ${owner}`);
-        userScores[owner] =
-          (userScores[owner] || 0) + scoringRules.hasUndernames;
-      }
-
-      if (
-        antState?.Logo &&
-        antState.Logo !== "Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A"
-      ) {
-        console.log(`- Adding score for setCustomLogo for owner: ${owner}`);
-        userScores[owner] =
-          (userScores[owner] || 0) + scoringRules.setCustomLogo;
-      }
-
-      if (antState?.Controllers?.length > 0) {
-        console.log(`- Adding score for setANTController for owner: ${owner}`);
-        userScores[owner] =
-          (userScores[owner] || 0) + scoringRules.setANTController;
-      }
-
-      if (antState?.Description) {
-        console.log(`- Adding score for setDescription for owner: ${owner}`);
-        userScores[owner] =
-          (userScores[owner] || 0) + scoringRules.setDescription;
-      }
-
-      if (antState?.Keywords?.length > 0) {
-        console.log(`- Adding score for setKeywords for owner: ${owner}`);
-        userScores[owner] = (userScores[owner] || 0) + scoringRules.setKeywords;
+    if (firstTransactionTimestamp) {
+      const agePoints = calculateAgePoints(firstTransactionTimestamp);
+      if (agePoints > 0) {
+        console.log(
+          `- Adding ${agePoints} score for wallet age to address: ${address}`
+        );
+        userScores[address].score += agePoints;
+        userScores[address].categories.add("walletAge");
       }
     }
   }
 
-  return Object.entries(userScores).map(([address, score]) => ({
+  return Object.entries(userScores).map(([address, data]) => ({
     address,
-    score,
+    score: data.score,
+    categories: Array.from(data.categories),
   }));
 }
 
 // Write scores to a CSV file
 async function writeScoresToCSV(userScores: UserScore[]) {
+  const currentTimestamp = Math.floor(Date.now() / 1000);
   const csvWriter = createObjectCsvWriter({
-    path: "exp_airdrop_2_scores.csv",
+    path: `exp_airdrop_2_scores_${currentTimestamp}.csv`,
     header: [
       { id: "address", title: "Address" },
       { id: "score", title: "Score" },
+      { id: "categories", title: "Categories" },
     ],
   });
 
-  await csvWriter.writeRecords(userScores);
+  await csvWriter.writeRecords(
+    userScores.map((user) => ({
+      address: user.address,
+      score: user.score,
+      categories: user.categories.join(", "),
+    }))
+  );
   console.log("Scores written to airdrop_scores.csv");
 }
 
@@ -393,8 +562,19 @@ async function main() {
   console.log("Fetching ArNS records...");
   const records = await fetchArNSRecords();
 
+  console.log("Fetching Primary ArNS names...");
+  const primaryNames = await fetchPrimaryNames();
+
+  console.log("Fetching gateways and delegates");
+  const gateways = await fetchGateways();
+
   console.log("Calculating scores...");
-  const userScores = await tallyScores(records, tokenHolders);
+  const userScores = await tallyScores(
+    records,
+    tokenHolders,
+    gateways,
+    primaryNames
+  );
 
   console.log("Writing scores to CSV...");
   await writeScoresToCSV(userScores);

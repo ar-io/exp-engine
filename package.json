@@ -15,7 +15,7 @@
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "@ar.io/sdk": "^2.5.5",
+    "@ar.io/sdk": "^2.6.0",
     "@commitlint/config-conventional": "^17.7.0",
     "@permaweb/aoconnect": "^0.0.45",
     "@trivago/prettier-plugin-sort-imports": "^4.0.0",
@@ -56,10 +56,12 @@
     "postversion": "git push && git push --tags",
     "start": "yarn run build && node ./lib/index.js",
     "test": "yarn run build && node ./lib/test.js",
+    "exp-airdrop-2": "yarn run build && node ./lib/exp-airdrop-2.js",
     "send-exp-tokens": "yarn run build && node ./lib/send-exp-tokens.js",
     "send-exp-tokens-bulk": "yarn run build && node ./lib/send-exp-tokens-bulk.js",
     "send-tio-tokens": "yarn run build && node ./lib/send-tio-tokens.js",
     "send-tio-tokens-single": "yarn run build && node ./lib/send-tio-tokens-single.js",
+    "get-ao-balances": "yarn run build && node ./lib/get-ao-balances.js",
     "get-exp-balances": "yarn run build && node ./lib/get-exp-balances.js",
     "get-tio-balances": "yarn run build && node ./lib/get-tio-balances.js",
     "get-dio-balances": "yarn run build && node ./lib/get-dio-balances.js",
