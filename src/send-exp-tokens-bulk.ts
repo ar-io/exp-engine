@@ -6,7 +6,7 @@ const recipientsFilePath = path.join(
   __dirname,
   "..",
   "data",
-  "chainfeeds-exp-airdrop.json"
+  "finalScores_2025-01-15T20-12-52-414Z.json"
 );
 
 async function distributeTokens(dryRun = true) {
@@ -15,7 +15,7 @@ async function distributeTokens(dryRun = true) {
   await chunkAndLoadBalances(recipientsData, dryRun);
 }
 
-distributeTokens(true) // set to `true` to dry run
+distributeTokens(false) // set to `true` to dry run
   .then(() => {
     console.log("Token distribution completed.");
   })

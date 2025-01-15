@@ -46,3 +46,4 @@ exp-key.json
 /src/apikeys.ts
 
 /data/*
+*.csv

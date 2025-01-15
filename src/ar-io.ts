@@ -290,7 +290,7 @@ export async function getState(processId: string): Promise<any> {
     return state;
   } catch (error) {
     console.error(`Error getting state:`, error.message);
-    return null; // Return null to indicate a failed fetch
+    return { Owner: null }; // Return null to indicate a failed fetch
   }
 }
 
