@@ -1,9 +1,10 @@
 import { expProcessId } from "./constants";
+import { ARDRIVE_CU } from "./exp-airdrop-2/constants";
 import { saveJsonToFile } from "./utilities";
 import { connect } from "@permaweb/aoconnect";
 
 const { dryrun } = connect({
-  CU_URL: `https://vilenarios.com/ao/cu`,
+  CU_URL: ARDRIVE_CU,
 });
 
 async function main() {

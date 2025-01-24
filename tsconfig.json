@@ -9,10 +9,10 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "allowJs": true,
-    "baseUrl": ".",
+    "baseUrl": "./src", // Set the base URL to `src` for resolving imports
     "types": ["node", "jest"],
     "lib": ["esnext"],
-    "outDir": "./lib",
+    "outDir": "./lib", // Output compiled files to the `lib` folder
 
     // additional checks
     "pretty": true,
@@ -23,6 +23,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src", "src/globals.d.ts"],
-  "exclude": ["node_modules", "tests", "src/*.js"]
+  "include": ["src/**/*", "src/globals.d.ts"], // Include all TypeScript files in `src`
+  "exclude": ["node_modules", "tests", "src/**/*.js"] // Exclude JS files from `src`
 }

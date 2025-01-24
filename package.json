@@ -8,6 +8,7 @@
     "axios": "^0.26.0",
     "axios-retry": "^3.2.4",
     "country-list": "^2.3.0",
+    "csv-parser": "^3.1.0",
     "csv-writer": "^1.6.0",
     "geoip-lite": "^1.4.10",
     "mathjs": "^13.2.0",
@@ -63,9 +64,23 @@
     "send-tio-tokens-single": "yarn run build && node ./lib/send-tio-tokens-single.js",
     "get-ao-balances": "yarn run build && node ./lib/get-ao-balances.js",
     "get-exp-balances": "yarn run build && node ./lib/get-exp-balances.js",
+    "get-paginated-exp-balances": "yarn run build && node ./lib/get-paginated-exp-balances.js",
     "get-tio-balances": "yarn run build && node ./lib/get-tio-balances.js",
     "get-dio-balances": "yarn run build && node ./lib/get-dio-balances.js",
-    "get-network-details": "yarn run build && node ./lib/get-network-details.js"
+    "get-ardrive-balances": "yarn run build && node ./lib/get-ardrive-balances.js",
+    "get-network-details": "yarn run build && node ./lib/get-network-details.js",
+    "score-token-holders": "yarn run build && node ./lib/exp-airdrop-2/scoreTokenHolders.js",
+    "score-arns-records": "yarn run build && node ./lib/exp-airdrop-2/scoreArNSRecords.js",
+    "score-gateways": "yarn run build && node ./lib/exp-airdrop-2/scoreGateways.js",
+    "score-delegates": "yarn run build && node ./lib/exp-airdrop-2/scoreDelegates.js",
+    "score-primary-names": "yarn run build && node ./lib/exp-airdrop-2/scorePrimaryNames.js",
+    "score-protocol-land": "yarn run build && node ./lib/exp-airdrop-2/scoreProtocolLandUsers.js",
+    "score-permaweb-deploy": "yarn run build && node ./lib/exp-airdrop-2/scorePermawebDeployUsers.js",
+    "score-vouched-users": "yarn run build && node ./lib/exp-airdrop-2/scoreVouchedUsers.js",
+    "merge-scores": "yarn run build && node ./lib/exp-airdrop-2/mergeScores.js",
+    "score-wallet-age": "yarn run build && node ./lib/exp-airdrop-2/scoreWalletAge.js",
+    "calculate-final-exp-balances": "yarn run build && node ./lib/exp-airdrop-2/calculateFinalEXPBalances.js",
+    "convert-final-scores": "yarn run build && node ./lib/exp-airdrop-2/convertFinalScoresToJSON.js"
   },
   "lint-staged": {
     "**/*.{ts,js,json}": [

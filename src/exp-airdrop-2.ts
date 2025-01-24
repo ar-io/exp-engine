@@ -1,7 +1,7 @@
-import { testnetProcessId } from "./constants";
 import { IO, ANT, AOProcess } from "@ar.io/sdk";
 import { connect, dryrun } from "@permaweb/aoconnect";
 import { createObjectCsvWriter } from "csv-writer";
+import { testnetProcessId } from "exp-airdrop-2/constants";
 
 type UserScore = {
   address: string;
