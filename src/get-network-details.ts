@@ -8,11 +8,18 @@ import * as math from "mathjs";
 import path from "path";
 import { performance } from "perf_hooks";
 
+let leavingGateways = 0;
+let totalGatewaysFound = 0;
+
 interface GatewayInfo {
   fqdn: string;
   ipAddress: string;
   ping: number;
   release: string;
+  processId: string;
+  ans104UnbundleFilter: any;
+  ans104IndexFilter: any;
+  supportedManifestVersions: any;
   operatorStake: number;
   totalDelegatedStake: number;
   delegatesCount: number;
@@ -52,6 +59,12 @@ interface GatewayInfo {
       console.log(`Fetched ${response.items.length} gateways`);
 
       for (const gateway of response.items) {
+        totalGatewaysFound++;
+        if (gateway.status !== "joined") {
+          // Skip gateways that are not joined
+          leavingGateways++;
+          continue;
+        }
         const fqdn = gateway.settings.fqdn;
         const port = gateway.settings.port;
         const protocol = gateway.settings.protocol;
@@ -80,6 +93,11 @@ interface GatewayInfo {
 
           const ping = endTime - startTime;
           const release = result.data.release;
+          const processId = result.data.processId;
+          const ans104UnbundleFilter = result.data.ans104UnbundleFilter;
+          const ans104IndexFilter = result.data.ans104IndexFilter;
+          const supportedManifestVersions =
+            result.data.supportedManifestVerions;
           const ipAddress = result.request.socket.remoteAddress;
 
           let isp = "N/A";
@@ -100,6 +118,10 @@ interface GatewayInfo {
             ipAddress,
             ping,
             release,
+            processId,
+            ans104UnbundleFilter,
+            ans104IndexFilter,
+            supportedManifestVersions,
             operatorStake,
             totalDelegatedStake,
             delegatesCount,
@@ -125,6 +147,10 @@ interface GatewayInfo {
             ipAddress: "N/A",
             ping: -1,
             release: "N/A",
+            processId: "N/A",
+            ans104UnbundleFilter: {},
+            ans104IndexFilter: {},
+            supportedManifestVersions: {},
             operatorStake,
             totalDelegatedStake,
             delegatesCount,
@@ -148,7 +174,63 @@ interface GatewayInfo {
       hasMore = response.hasMore;
     }
 
-    console.log("Finished fetching all gateways.");
+    console.log(`Finished fetching all ${totalGatewaysFound} gateways.`);
+
+    // FQDN Analytics (only for "Joined" gateways)
+    const fqdnStats = gateways.reduce(
+      (stats, gateway) => {
+        const fqdn = gateway.fqdn;
+        const tld = fqdn.split(".").pop() || "unknown";
+        const domainName = fqdn.split(".").slice(0, -1).join(".");
+        stats.totalDomainNameLength += domainName.length;
+        stats.totalFQDNCount++;
+        stats.tlds[tld] = (stats.tlds[tld] || 0) + 1;
+        stats.fqdnLengths.push(domainName.length);
+        return stats;
+      },
+      {
+        totalFQDNCount: 0,
+        totalDomainNameLength: 0,
+        tlds: {} as Record<string, number>,
+        fqdnLengths: [] as number[],
+      }
+    );
+
+    // Sort TLDs by frequency (highest count first)
+    const sortedTLDs = Object.entries(fqdnStats.tlds)
+      .sort(([, aCount], [, bCount]) => bCount - aCount)
+      .map(([tld, count]) => ({ tld, count }));
+
+    // Calcualte unique tlds
+    const uniqueTLDCount = Object.keys(fqdnStats.tlds).length;
+
+    // Calculate average domain name length
+    const averageDomainNameLength =
+      fqdnStats.totalDomainNameLength / fqdnStats.totalFQDNCount;
+
+    console.log("\n===== FQDN Analytics =====");
+    console.log(`Total FQDNs (Joined): ${fqdnStats.totalFQDNCount}`);
+    console.log(`Unique TLDs: ${uniqueTLDCount}`);
+    console.log(
+      `Average Domain Name Length: ${averageDomainNameLength.toFixed(2)}`
+    );
+    console.log("\nTLD Frequency (Sorted):");
+    sortedTLDs.forEach(({ tld, count }) => {
+      console.log(`  ${tld}: ${count}`);
+    });
+
+    const fqdnLengthDistribution = fqdnStats.fqdnLengths.reduce(
+      (distribution, length) => {
+        distribution[length] = (distribution[length] || 0) + 1;
+        return distribution;
+      },
+      {} as Record<number, number>
+    );
+
+    console.log("\nFQDN Length Distribution:");
+    Object.entries(fqdnLengthDistribution).forEach(([length, count]) => {
+      console.log(`  Length ${length}: ${count}`);
+    });
 
     // Write results to a CSV file
     const createCsvWriter = csvWriter.createObjectCsvWriter;
@@ -177,6 +259,13 @@ interface GatewayInfo {
         { id: "isp", title: "ISP" },
         { id: "geoLocation", title: "Geo Location" },
         { id: "errorMessage", title: "Error Message" },
+        { id: "processId", title: "Process Id" },
+        { id: "ans104UnbundleFilter", title: "ANS-104 Unbundle Filter" },
+        { id: "ans104IndexFilter", title: "ANS-104 Index Filter" },
+        {
+          id: "supportedManifestVersions",
+          title: "Supported Manifest Versions",
+        },
       ],
     });
 
@@ -184,7 +273,7 @@ interface GatewayInfo {
     console.log(`Gateways information exported successfully to ${fileName}`);
 
     // Provide summary of results
-    const totalGateways = gateways.length;
+    const totalGateways = gateways.length + leavingGateways;
     const joinedGateways = gateways.filter((g) => g.status === "joined").length;
     const onlineGateways = gateways.filter((g) => g.ping > 0).length;
     const releaseCounts: { [key: string]: number } = {};
@@ -216,6 +305,7 @@ interface GatewayInfo {
     console.log(`Total Gateways: ${totalGateways}`);
     console.log(`Gateways Joined: ${joinedGateways}`);
     console.log(`Gateways Online: ${onlineGateways}`);
+    console.log(`Gateways Leaving: ${leavingGateways}`);
     console.log("\nRelease Counts:");
     Object.entries(releaseCounts).forEach(([release, count]) => {
       console.log(`  Release ${release}: ${count} gateways`);
