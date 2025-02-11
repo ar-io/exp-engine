@@ -41,6 +41,8 @@ export const scoringRules: { [key: string]: number } = {
   vouchedUser: 200,
   permaSwapEXPTARIOLP: 250,
   hundredPassedConsecutiveEpochs: 200,
+  paragraphUser: 300,
+  mirrorUser: 300,
 };
 
 export const tokenRequirements: {

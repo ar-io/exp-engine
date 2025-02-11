@@ -227,7 +227,7 @@ interface GatewayInfo {
       {} as Record<number, number>
     );
 
-    console.log("\nFQDN Length Distribution:");
+    console.log("\nDomain Name Length Distribution:");
     Object.entries(fqdnLengthDistribution).forEach(([length, count]) => {
       console.log(`  Length ${length}: ${count}`);
     });

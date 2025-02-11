@@ -582,6 +582,216 @@ export async function fetchPermawebDeployUsers(): Promise<Set<string>> {
   return permawebDeployUsers;
 }
 
+export async function fetchParagraphUsers(): Promise<{
+  allUsersData: any[];
+  uniqueContributors: Set<string>;
+}> {
+  const query = `
+      query($cursor: String) {
+        transactions(
+          first: 100,
+          after: $cursor,
+          tags: [
+            { name: "AppName", values: ["Paragraph"] },
+            { name: "Content-Type", values: ["application/json"] }
+          ]
+        ) {
+          edges {
+            node {
+              owner {
+                address
+              }
+              tags {
+                name
+                value
+              }
+            }
+            cursor
+          }
+        }
+      }
+    `;
+
+  const fetchWithRetry = async (
+    cursor: string | null,
+    attempts = 5,
+    delay = 1000
+  ): Promise<any> => {
+    try {
+      const response = await fetch(
+        "https://arweave-search.goldsky.com/graphql",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, variables: { cursor } }),
+        }
+      );
+
+      const result: any = await response.json();
+
+      if (result.errors) {
+        console.error("GraphQL errors:", result.errors);
+        throw new Error(result.errors[0]?.message || "Unknown GraphQL error");
+      }
+
+      return result;
+    } catch (err) {
+      console.warn(`Request failed: ${err.message}. Retrying in ${delay}ms...`);
+      if (attempts > 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return fetchWithRetry(cursor, attempts - 1, delay * 2); // Exponential backoff
+      } else {
+        console.error("Request failed after maximum retries:", err);
+        throw err; // Give up after max attempts
+      }
+    }
+  };
+
+  let hasMore = true;
+  let cursor: string | null = null;
+  const allUsersData: { address: any; tags: any }[] = [];
+  const uniqueContributors = new Set<string>();
+
+  while (hasMore) {
+    const result = await fetchWithRetry(cursor);
+    const edges = result?.data?.transactions?.edges || [];
+
+    edges.forEach((edge: { node: { owner: { address: any }; tags: any } }) => {
+      const ownerAddress = edge.node.owner.address;
+      const tags = edge.node.tags;
+
+      // Collect data for all transactions
+      allUsersData.push({ address: ownerAddress, tags });
+
+      // Collect unique contributors
+      tags.forEach((tag: { name: string; value: string }) => {
+        if (tag.name === "Contributor" && tag.value) {
+          uniqueContributors.add(tag.value);
+        }
+      });
+    });
+
+    if (edges.length < 100) {
+      hasMore = false;
+    } else {
+      cursor = edges[edges.length - 1].cursor;
+    }
+  }
+
+  return { allUsersData, uniqueContributors };
+}
+
+export async function fetchMirrorUsers(): Promise<{
+  allUsersData: any[];
+  uniqueContributors: Set<string>;
+}> {
+  const query = `
+      query($cursor: String) {
+        transactions(
+          first: 1000,
+          after: $cursor,
+          tags: [
+            { name: "App-Name", values: ["MirrorXYZ"] },
+            { name: "Content-Type", values: ["application/json"] }
+          ]
+        ) {
+          edges {
+            node {
+              id
+              owner {
+                address
+              }
+              tags {
+                name
+                value
+              }
+            }
+            cursor
+          }
+        }
+      }
+    `;
+
+  const fetchWithRetry = async (
+    cursor: string | null,
+    attempts = 5,
+    delay = 1000
+  ): Promise<any> => {
+    try {
+      const response = await fetch(
+        "https://arweave-search.goldsky.com/graphql",
+        // "https://arweave.net/graphql",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, variables: { cursor } }),
+        }
+      );
+
+      const result: any = await response.json();
+
+      if (result.errors) {
+        console.error("GraphQL errors:", result.errors);
+        throw new Error(result.errors[0]?.message || "Unknown GraphQL error");
+      }
+
+      return result;
+    } catch (err) {
+      console.warn(`Request failed: ${err.message}. Retrying in ${delay}ms...`);
+      if (attempts > 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return fetchWithRetry(cursor, attempts - 1, delay * 2); // Exponential backoff
+      } else {
+        console.error("Request failed after maximum retries:", err);
+        throw err; // Give up after max attempts
+      }
+    }
+  };
+
+  let hasMore = true;
+  let cursor: string | null = null;
+  const allUsersData: { address: any; tags: any }[] = [];
+  const uniqueContributors = new Set<string>();
+
+  while (hasMore) {
+    const result = await fetchWithRetry(cursor);
+    const edges = result?.data?.transactions?.edges || [];
+
+    edges.forEach(
+      (edge: { node: { owner: { address: any }; tags: any; id: string } }) => {
+        const ownerAddress = edge.node.owner.address;
+        const tags = edge.node.tags;
+        const txId = edge.node.id;
+
+        // Collect data for all transactions
+        allUsersData.push({ address: ownerAddress, tags });
+
+        // Collect unique contributors
+        tags.forEach((tag: { name: string; value: string }) => {
+          if (
+            tag.name === "Contributor" &&
+            tag.value &&
+            !uniqueContributors.has(tag.value)
+          ) {
+            uniqueContributors.add(tag.value);
+            console.log(
+              `Added unique contributor: ${tag.value} with txid: ${txId}`
+            );
+          }
+        });
+      }
+    );
+
+    if (edges.length < 100) {
+      hasMore = false;
+    } else {
+      cursor = edges[edges.length - 1].cursor;
+    }
+  }
+
+  return { allUsersData, uniqueContributors };
+}
+
 export async function fetchPermaverseScores() {
   const permaverseUsersPath = "./PermaverseUsers.json";
 
