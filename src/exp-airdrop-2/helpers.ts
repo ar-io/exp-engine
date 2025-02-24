@@ -5,14 +5,14 @@ import {
   TESTNET_CU,
   testnetProcessId,
 } from "./constants";
-import { AOProcess, IO } from "@ar.io/sdk";
+import { AOProcess, ARIO } from "@ar.io/sdk";
 import { connect } from "@permaweb/aoconnect";
 import csv from "csv-parser";
 import { createObjectCsvWriter } from "csv-writer";
 import fs from "fs";
 import path from "path";
 
-export const ario = IO.init({
+export const ario = ARIO.init({
   process: new AOProcess({
     processId: testnetProcessId,
     ao: connect({
@@ -289,7 +289,7 @@ export async function fetchFirstTransactionTimestamp(
 
 // Fetch gateways
 export async function fetchGateways() {
-  const ario = IO.init({
+  const ario = ARIO.init({
     process: new AOProcess({
       processId: testnetProcessId,
       ao: connect({
@@ -318,7 +318,7 @@ export async function fetchGateways() {
 
 // Fetch delegations for a gateway
 export async function fetchDelegations(gatewayAddress: string) {
-  const ario = IO.init({
+  const ario = ARIO.init({
     process: new AOProcess({
       processId: testnetProcessId,
       ao: connect({
@@ -347,7 +347,7 @@ export async function fetchDelegations(gatewayAddress: string) {
 
 // Fetch all ArNS records
 export async function fetchArNSRecords() {
-  const ario = IO.init({
+  const ario = ARIO.init({
     process: new AOProcess({
       processId: testnetProcessId,
       ao: connect({
@@ -377,7 +377,7 @@ export async function fetchArNSRecords() {
 
 // Fetch primary names
 export async function fetchPrimaryNames() {
-  const ario = IO.init({
+  const ario = ARIO.init({
     process: new AOProcess({
       processId: testnetProcessId,
       ao: connect({

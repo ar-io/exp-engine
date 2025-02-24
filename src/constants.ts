@@ -5,6 +5,8 @@ export const tIOfaucetKeyfile =
 export const MINT_DELAY = 50; // 100 ms delay for minting
 export const testExpProcessId = "mbGcJfiMXhHAX2-TBYGjonztCdGY1GEuQ66Wt3AINZI"; // testnet
 export const expProcessId = "aYrCboXVSl1AXL9gPFe3tfRxRf0ZmkOXH65mKT0HHZw"; // mainnet
+export const mainnetArioProcessId =
+  "qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE"; // mainnet
 export const testnetProcessId = "agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA";
 // export const AO_CU_URL = "https://cu.ar-io.dev";
 export const AO_CU_URL = "https://vilenarios.com/ao/cu";

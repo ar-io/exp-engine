@@ -5,6 +5,7 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "dependencies": {
+    "@ar.io/sdk": "^3.8.1",
     "axios": "^0.26.0",
     "axios-retry": "^3.2.4",
     "country-list": "^2.3.0",
@@ -16,7 +17,6 @@
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "@ar.io/sdk": "^2.6.0",
     "@commitlint/config-conventional": "^17.7.0",
     "@permaweb/aoconnect": "^0.0.45",
     "@trivago/prettier-plugin-sort-imports": "^4.0.0",
@@ -64,6 +64,7 @@
     "send-tio-tokens-single": "yarn run build && node ./lib/send-tio-tokens-single.js",
     "get-ao-balances": "yarn run build && node ./lib/get-ao-balances.js",
     "get-exp-balances": "yarn run build && node ./lib/get-exp-balances.js",
+    "get-ario-balances": "yarn run build && node ./lib/get-ario-balances.js",
     "get-paginated-exp-balances": "yarn run build && node ./lib/get-paginated-exp-balances.js",
     "get-tio-balances": "yarn run build && node ./lib/get-tio-balances.js",
     "get-dio-balances": "yarn run build && node ./lib/get-dio-balances.js",

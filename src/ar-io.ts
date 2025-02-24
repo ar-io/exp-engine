@@ -16,7 +16,7 @@ import {
   retryFetch,
   saveJsonToFile,
 } from "./utilities";
-import { IO, ArweaveSigner, ANT, AOProcess, AoPrimaryName } from "@ar.io/sdk";
+import { ARIO, ArweaveSigner, ANT, AOProcess, AoPrimaryName } from "@ar.io/sdk";
 import { connect } from "@permaweb/aoconnect";
 import path from "path";
 
@@ -25,12 +25,12 @@ const wallet: JWKInterface = loadWallet("faucet");
 const nodeSigner = new ArweaveSigner(wallet);
 // read and write client that has access to all APIs
 // set up client
-const arIOWriteable = IO.init({
+const arIOWriteable = ARIO.init({
   processId: testnetProcessId,
   signer: nodeSigner,
 });
 
-export const io = IO.init({
+export const io = ARIO.init({
   process: new AOProcess({
     processId: testnetProcessId,
     ao: connect({
@@ -173,7 +173,7 @@ export async function fetchCache(url: string): Promise<any> {
 export async function getPrimaryName(address: string): Promise<AoPrimaryName> {
   let name: AoPrimaryName;
   try {
-    const ario = IO.init();
+    const ario = ARIO.init();
 
     name = await ario.getPrimaryName({
       address,
@@ -188,7 +188,7 @@ export async function getPrimaryName(address: string): Promise<AoPrimaryName> {
 export async function getPrimaryNames(): Promise<AoPrimaryName[]> {
   let names: AoPrimaryName[];
   try {
-    const ario = IO.init();
+    const ario = ARIO.init();
 
     const result = await ario.getPrimaryNames({
       limit: 10000,
@@ -207,7 +207,7 @@ export async function getPrimaryNames(): Promise<AoPrimaryName[]> {
 // Function to fetch data from ARNS cache with error handling
 export async function getRecords(): Promise<any> {
   try {
-    const arIO = IO.init({
+    const arIO = ARIO.init({
       process: new AOProcess({
         processId: testnetProcessId,
         ao: connect({
@@ -227,7 +227,7 @@ export async function getRecords(): Promise<any> {
 
 export async function getGateways(): Promise<any> {
   try {
-    const arIO = IO.init({
+    const arIO = ARIO.init({
       process: new AOProcess({
         processId: testnetProcessId,
         ao: connect({
@@ -251,7 +251,7 @@ export async function getGateways(): Promise<any> {
 
 export async function hasDelegations(address: string): Promise<boolean> {
   try {
-    const arIO = IO.init({
+    const arIO = ARIO.init({
       process: new AOProcess({
         processId: testnetProcessId,
         ao: connect({

@@ -1,7 +1,7 @@
 import { testnetProcessId } from "./constants";
 import { JWKInterface } from "./types";
 import { loadWallet } from "./utilities";
-import { AOProcess, ArweaveSigner, IO } from "@ar.io/sdk";
+import { AOProcess, ArweaveSigner, ARIO } from "@ar.io/sdk";
 import { connect } from "@permaweb/aoconnect";
 
 // const AO_CU_URL = "https://cu.ar-io.dev";
@@ -10,7 +10,7 @@ const AO_CU_URL = "https://vilenarios.com/ao/cu";
 // Get the key file used for the distribution
 const wallet: JWKInterface = loadWallet("tio");
 
-const io = IO.init({
+const io = ARIO.init({
   process: new AOProcess({
     processId: testnetProcessId,
     ao: connect({

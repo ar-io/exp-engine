@@ -1,4 +1,4 @@
-import { IO, ANT, AOProcess } from "@ar.io/sdk";
+import { ARIO, ANT, AOProcess } from "@ar.io/sdk";
 import { connect, dryrun } from "@permaweb/aoconnect";
 import { createObjectCsvWriter } from "csv-writer";
 import { testnetProcessId } from "exp-airdrop-2/constants";
@@ -9,7 +9,7 @@ type UserScore = {
   categories: string[];
 };
 
-export const ario = IO.init({
+export const ario = ARIO.init({
   process: new AOProcess({
     processId: testnetProcessId,
     ao: connect({

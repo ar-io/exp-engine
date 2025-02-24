@@ -1,7 +1,7 @@
 import { expProcessId } from "./constants";
 import { IOToken, JWKInterface } from "./types";
 import { loadJsonFile, loadWallet } from "./utilities";
-import { AOProcess, ArweaveSigner, IO } from "@ar.io/sdk";
+import { AOProcess, ArweaveSigner, ARIO } from "@ar.io/sdk";
 import { connect } from "@permaweb/aoconnect";
 import { createObjectCsvWriter } from "csv-writer";
 import path from "path";
@@ -19,7 +19,7 @@ const recipientsFilePath = path.join(
   "tIO_ardrive_under_100KiB_airdrop_targets-2.json"
 );
 
-const io = IO.init({
+const io = ARIO.init({
   process: new AOProcess({
     processId: expProcessId,
     ao: connect({

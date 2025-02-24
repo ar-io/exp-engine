@@ -340,7 +340,7 @@ function analyzeGateways(gateways: Gateways) {
 
 /*
 async function main() {
-  const io = IO.init({
+  const io = ARIO.init({
     process: new AOProcess({
       processId: expProcessId,
       ao: connect({

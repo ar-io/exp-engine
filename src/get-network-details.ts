@@ -1,4 +1,4 @@
-import { IO } from "@ar.io/sdk";
+import { ARIO } from "@ar.io/sdk";
 import axios from "axios";
 import countryList from "country-list";
 import * as csvWriter from "csv-writer";
@@ -39,7 +39,7 @@ interface GatewayInfo {
 
 (async () => {
   try {
-    const io = IO.init();
+    const io = ARIO.init();
     const gateways: GatewayInfo[] = [];
     let cursor = undefined;
     let hasMore = true;

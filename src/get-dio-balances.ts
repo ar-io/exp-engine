@@ -1,13 +1,13 @@
 import { Balances, Gateways } from "./types";
 import { saveJsonToFile } from "./utilities";
-import { ioDevnetProcessId } from "@ar.io/sdk";
+import { arioDevnetProcessId } from "@ar.io/sdk";
 import { dryrun } from "@permaweb/aoconnect";
 
 async function main() {
   // console.log(`dry run results:`);
   // console.dir(balancesDryRead.Messages[0], { depth: 30 });
   const balancesDryRead = await dryrun({
-    process: ioDevnetProcessId,
+    process: arioDevnetProcessId,
     tags: [{ name: "Action", value: "Balances" }],
   });
 
@@ -17,7 +17,7 @@ async function main() {
   );
 
   const gatewaysDryRead = await dryrun({
-    process: ioDevnetProcessId,
+    process: arioDevnetProcessId,
     tags: [{ name: "Action", value: "Gateways" }],
   });
 
