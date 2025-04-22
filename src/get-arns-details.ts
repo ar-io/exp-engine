@@ -217,16 +217,20 @@ async function main() {
   const records = await fetchArNSRecords();
   const limit = pLimit(CONCURRENCY);
   let processed = 0;
-
-  for (const record of records) {
-    await limit(() =>
-      analyzeRecord(record.name, record.processId, writeRow, tally)
-    );
-    processed++;
-    if (processed % 25 === 0) {
-      console.log(`[🔄] Processed ${processed}/${records.length}`);
-    }
-  }
+  
+  // Create an array of thunks (functions that return promises)
+  const tasks = records.map((record) =>
+    limit(async () => {
+      await analyzeRecord(record.name, record.processId, writeRow, tally);
+      processed++;
+      if (processed % 25 === 0) {
+        console.log(`[🔄] Processed ${processed}/${records.length}`);
+      }
+    })
+  );
+  
+  // Await all tasks concurrently with the concurrency limit
+  await Promise.allSettled(tasks);
 
   close(); // Ensure final CSV flush
 
