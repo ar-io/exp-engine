@@ -1,10 +1,11 @@
 import { mainnetArioProcessId } from "./constants";
-import { ARDRIVE_CU } from "./exp-airdrop-2/constants";
 import { connect } from "@permaweb/aoconnect";
 import { createObjectCsvWriter } from "csv-writer";
 
 const { dryrun } = connect({
-  CU_URL: ARDRIVE_CU,
+  // CU_URL: "https://cu.ardrive.io",
+  CU_URL: "https://cu.ao-testnet.xyz",
+  // CU_URL: "https://vilenarios.com/ao/cu",
 });
 
 async function writeBalancesToCSV(data: Record<string, number>) {
@@ -76,6 +77,48 @@ Average Balance: ${averageBalance / 1_000_000 || 0}
 Minimum Balance: ${minBalance / 1_000_000 || 0}
 Maximum Balance: ${maxBalance / 1_000_000 || 0}
 `;
+
+  const dryRead2 = await dryrun({
+    process: mainnetArioProcessId,
+    tags: [{ name: "Action", value: "Total-Supply" }],
+  });
+
+  if (!dryRead2.Messages || dryRead.Messages.length === 0) {
+    throw new Error("No messages returned from dryrun.");
+  }
+
+  if (!dryRead2.Messages[0].Data) {
+    throw new Error("No data found in the first message.");
+  }
+  let totalSupplyData: any;
+  try {
+    totalSupplyData = JSON.parse(dryRead2.Messages[0].Data);
+  } catch (error) {
+    throw new Error("Failed to parse JSON data: " + error.message);
+  }
+
+  console.log("Total Supply Data: ", totalSupplyData);
+
+  const dryRead3 = await dryrun({
+    process: mainnetArioProcessId,
+    tags: [{ name: "Action", value: "Total-Token-Supply" }],
+  });
+
+  if (!dryRead3.Messages || dryRead.Messages.length === 0) {
+    throw new Error("No messages returned from dryrun.");
+  }
+
+  if (!dryRead3.Messages[0].Data) {
+    throw new Error("No data found in the first message.");
+  }
+  let totalTokenSupplyData: any;
+  try {
+    totalTokenSupplyData = JSON.parse(dryRead3.Messages[0].Data);
+  } catch (error) {
+    throw new Error("Failed to parse JSON data: " + error.message);
+  }
+
+  console.log("Total Token Supply Data: ", totalTokenSupplyData);
 
   console.log(report);
 }

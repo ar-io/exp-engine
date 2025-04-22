@@ -5,7 +5,7 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "dependencies": {
-    "@ar.io/sdk": "^3.8.1",
+    "@ar.io/sdk": "^3.8.3",
     "axios": "^0.26.0",
     "axios-retry": "^3.2.4",
     "country-list": "^2.3.0",
@@ -62,6 +62,7 @@
     "send-exp-tokens-bulk": "yarn run build && node ./lib/send-exp-tokens-bulk.js",
     "send-tio-tokens": "yarn run build && node ./lib/send-tio-tokens.js",
     "send-tio-tokens-single": "yarn run build && node ./lib/send-tio-tokens-single.js",
+    "send-ao-tokens": "yarn run build && node ./lib/send-ao-tokens.js",
     "get-ao-balances": "yarn run build && node ./lib/get-ao-balances.js",
     "get-exp-balances": "yarn run build && node ./lib/get-exp-balances.js",
     "get-ario-balances": "yarn run build && node ./lib/get-ario-balances.js",
@@ -84,7 +85,8 @@
     "merge-scores": "yarn run build && node ./lib/exp-airdrop-2/mergeScores.js",
     "score-wallet-age": "yarn run build && node ./lib/exp-airdrop-2/scoreWalletAge.js",
     "calculate-final-exp-balances": "yarn run build && node ./lib/exp-airdrop-2/calculateFinalEXPBalances.js",
-    "convert-final-scores": "yarn run build && node ./lib/exp-airdrop-2/convertFinalScoresToJSON.js"
+    "convert-final-scores": "yarn run build && node ./lib/exp-airdrop-2/convertFinalScoresToJSON.js",
+    "get-arns-details": "yarn run build && node ./lib/get-arns-details.js"
   },
   "lint-staged": {
     "**/*.{ts,js,json}": [

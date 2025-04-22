@@ -1,4 +1,6 @@
-import { ARIO } from "@ar.io/sdk";
+import { mainnetArioProcessId } from "./constants";
+import { AOProcess, ARIO } from "@ar.io/sdk";
+import { connect } from "@permaweb/aoconnect";
 import axios from "axios";
 import countryList from "country-list";
 import * as csvWriter from "csv-writer";
@@ -39,7 +41,14 @@ interface GatewayInfo {
 
 (async () => {
   try {
-    const io = ARIO.init();
+    const io = ARIO.init({
+      process: new AOProcess({
+        processId: mainnetArioProcessId,
+        ao: connect({
+          CU_URL: "https://cu.ardrive.io",
+        }),
+      }),
+    });
     const gateways: GatewayInfo[] = [];
     let cursor = undefined;
     let hasMore = true;

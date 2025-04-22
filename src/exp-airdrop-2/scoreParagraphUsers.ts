@@ -5,6 +5,7 @@ import { fetchParagraphUsers, writeScoresToCSV } from "./helpers";
 interface ScoreEntry {
   totalScore: number;
   paragraphUser: number;
+  transactionCount: number;
 }
 
 interface Scores {
@@ -13,36 +14,39 @@ interface Scores {
 
 async function main() {
   console.log("Fetching Paragraph users...");
-  const { allUsersData, uniqueContributors } = await fetchParagraphUsers();
+  const { allUsersData, uniqueContributors, contributorTransactionCounts } =
+    await fetchParagraphUsers();
 
-  // Process all transactions for CSV
+  // Prepare CSV with all transaction data
   const allDataForCSV = allUsersData.map((data) => ({
     address: data.address,
     tags: JSON.stringify(data.tags),
   }));
 
-  // Prepare data for the all transactions CSV
   await writeScoresToCSV(allDataForCSV, `allParagraphTransactions.csv`);
   console.log(
     "All Paragraph transactions written to allParagraphTransactions.csv"
   );
 
   // Initialize scores for unique contributors
-  const scores: Scores = {}; // Use the Scores interface here
+  const scores: Scores = {};
 
-  // Assign scores to each unique contributor
   uniqueContributors.forEach((contributor) => {
+    const txCount = contributorTransactionCounts.get(contributor) || 0;
+
     scores[contributor] = {
-      totalScore: scoringRules.paragraphUser, // Assign 300 points
-      paragraphUser: scoringRules.paragraphUser, // Specific category score
+      totalScore: scoringRules.paragraphUser,
+      paragraphUser: scoringRules.paragraphUser,
+      transactionCount: txCount,
     };
   });
 
-  // Prepare data for unique contributors CSV
+  // Prepare formatted data for CSV
   const formattedScores = Object.entries(scores).map(([address, data]) => ({
     address,
     totalScore: data.totalScore,
     paragraphUser: data.paragraphUser,
+    transactionCount: data.transactionCount,
   }));
 
   await writeScoresToCSV(

@@ -1,5 +1,4 @@
 import {
-  ARDRIVE_CU,
   protocolLandProcessId,
   scoringRules,
   TESTNET_CU,
@@ -12,9 +11,12 @@ import { createObjectCsvWriter } from "csv-writer";
 import fs from "fs";
 import path from "path";
 
+const ARDRIVE_CU = "https://cu.ardrive.io";
+const MAINNET_PROCESS_ID = "qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE";
+
 export const ario = ARIO.init({
   process: new AOProcess({
-    processId: testnetProcessId,
+    processId: MAINNET_PROCESS_ID,
     ao: connect({
       CU_URL: ARDRIVE_CU,
     }),
@@ -349,9 +351,9 @@ export async function fetchDelegations(gatewayAddress: string) {
 export async function fetchArNSRecords() {
   const ario = ARIO.init({
     process: new AOProcess({
-      processId: testnetProcessId,
+      processId: MAINNET_PROCESS_ID,
       ao: connect({
-        CU_URL: TESTNET_CU,
+        CU_URL: ARDRIVE_CU,
       }),
     }),
   });
@@ -585,32 +587,33 @@ export async function fetchPermawebDeployUsers(): Promise<Set<string>> {
 export async function fetchParagraphUsers(): Promise<{
   allUsersData: any[];
   uniqueContributors: Set<string>;
+  contributorTransactionCounts: Map<string, number>;
 }> {
   const query = `
-      query($cursor: String) {
-        transactions(
-          first: 100,
-          after: $cursor,
-          tags: [
-            { name: "AppName", values: ["Paragraph"] },
-            { name: "Content-Type", values: ["application/json"] }
-          ]
-        ) {
-          edges {
-            node {
-              owner {
-                address
-              }
-              tags {
-                name
-                value
-              }
+    query($cursor: String) {
+      transactions(
+        first: 100,
+        after: $cursor,
+        tags: [
+          { name: "AppName", values: ["Paragraph"] },
+          { name: "Content-Type", values: ["application/json"] }
+        ]
+      ) {
+        edges {
+          node {
+            owner {
+              address
             }
-            cursor
+            tags {
+              name
+              value
+            }
           }
+          cursor
         }
       }
-    `;
+    }
+  `;
 
   const fetchWithRetry = async (
     cursor: string | null,
@@ -639,10 +642,10 @@ export async function fetchParagraphUsers(): Promise<{
       console.warn(`Request failed: ${err.message}. Retrying in ${delay}ms...`);
       if (attempts > 1) {
         await new Promise((resolve) => setTimeout(resolve, delay));
-        return fetchWithRetry(cursor, attempts - 1, delay * 2); // Exponential backoff
+        return fetchWithRetry(cursor, attempts - 1, delay * 2);
       } else {
         console.error("Request failed after maximum retries:", err);
-        throw err; // Give up after max attempts
+        throw err;
       }
     }
   };
@@ -651,6 +654,7 @@ export async function fetchParagraphUsers(): Promise<{
   let cursor: string | null = null;
   const allUsersData: { address: any; tags: any }[] = [];
   const uniqueContributors = new Set<string>();
+  const contributorTransactionCounts = new Map<string, number>();
 
   while (hasMore) {
     const result = await fetchWithRetry(cursor);
@@ -660,13 +664,14 @@ export async function fetchParagraphUsers(): Promise<{
       const ownerAddress = edge.node.owner.address;
       const tags = edge.node.tags;
 
-      // Collect data for all transactions
       allUsersData.push({ address: ownerAddress, tags });
 
-      // Collect unique contributors
       tags.forEach((tag: { name: string; value: string }) => {
         if (tag.name === "Contributor" && tag.value) {
           uniqueContributors.add(tag.value);
+
+          const currentCount = contributorTransactionCounts.get(tag.value) || 0;
+          contributorTransactionCounts.set(tag.value, currentCount + 1);
         }
       });
     });
@@ -678,7 +683,7 @@ export async function fetchParagraphUsers(): Promise<{
     }
   }
 
-  return { allUsersData, uniqueContributors };
+  return { allUsersData, uniqueContributors, contributorTransactionCounts };
 }
 
 export async function fetchMirrorUsers(): Promise<{
