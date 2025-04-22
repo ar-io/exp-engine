@@ -381,16 +381,16 @@ export async function fetchArNSRecords() {
 export async function fetchPrimaryNames() {
   const ario = ARIO.init({
     process: new AOProcess({
-      processId: testnetProcessId,
+      processId: MAINNET_PROCESS_ID,
       ao: connect({
-        CU_URL: TESTNET_CU,
+        CU_URL: ARDRIVE_CU,
       }),
     }),
   });
-  let cursor: string | undefined;
-  const primaryNames: { [address: string]: string } = {};
+  const primaryNames = new Set<string>();
+  let cursor: string | undefined = undefined;
 
-  do {
+  while (true) {
     const { items, nextCursor } = await ario.getPrimaryNames({
       cursor,
       limit: 1000,
@@ -399,11 +399,12 @@ export async function fetchPrimaryNames() {
     });
 
     for (const item of items) {
-      primaryNames[item.owner] = item.name;
+      primaryNames.add(item.name);
     }
 
+    if (!nextCursor) break;
     cursor = nextCursor;
-  } while (cursor);
+  }
 
   return primaryNames;
 }

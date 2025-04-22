@@ -45,5 +45,7 @@ tio-key.json
 exp-key.json
 /src/apikeys.ts
 
+/data
 /data/*
 *.csv
+.yarn/

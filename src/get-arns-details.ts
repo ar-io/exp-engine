@@ -1,4 +1,4 @@
-import { fetchArNSRecords } from "./exp-airdrop-2/helpers";
+import { fetchArNSRecords, fetchPrimaryNames } from "./exp-airdrop-2/helpers";
 import { AOProcess, ANT } from "@ar.io/sdk";
 import { connect } from "@permaweb/aoconnect";
 import axios, { AxiosResponse } from "axios";
@@ -11,7 +11,7 @@ const PLACEHOLDER_TXS = new Set([
   "-k7t8xMoB8hW482609Z9F4bTFMC3MnuW8bTvTyT8pFI",
   "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
 ]);
-const CONCURRENCY = 20;
+const CONCURRENCY = 5;
 const OUTPUT_DIR = "arns-output";
 
 interface ArnsRecordAnalysis {
@@ -23,10 +23,12 @@ interface ArnsRecordAnalysis {
   isActive: boolean;
   contentType: string;
   isArweaveManifest: boolean;
+  isPrimaryName: boolean;
 }
 
 interface SummaryTally {
   totalRegisteredNames: number;
+  totalPrimaryNames: number;
   totalRecords: number;
   activeRecords: number;
   inactiveRecords: number;
@@ -57,7 +59,8 @@ async function analyzeRecord(
   name: string,
   processId: string,
   writeRow: (r: ArnsRecordAnalysis) => void,
-  tally: SummaryTally
+  tally: SummaryTally,
+  primaryNames: Set<string>
 ): Promise<void> {
   try {
     const ant = ANT.init({
@@ -81,7 +84,6 @@ async function analyzeRecord(
       );
     }
 
-    // fallback if state or records are unavailable
     if (!owner || !records) {
       try {
         records = await ant.getRecords();
@@ -110,7 +112,7 @@ async function analyzeRecord(
 
       const head = await safeHeadRequest(`https://arweave.net/raw/${txId}`);
       if (head) {
-        contentType = head.headers["Content-Type"] || "unknown";
+        contentType = head.headers["content-type"] || "unknown"; // FIXED
         isActive = true;
         isManifest = contentType === "application/x.arweave-manifest+json";
 
@@ -123,13 +125,14 @@ async function analyzeRecord(
 
       const result: ArnsRecordAnalysis = {
         name,
-        owner: owner || "unknown", // fallback if no owner found
+        owner: owner || "unknown",
         recordKey: key,
         transactionId: txId,
         isDefaultRecord: isDefault,
         isActive,
         contentType,
         isArweaveManifest: isManifest,
+        isPrimaryName: primaryNames.has(name),
       };
 
       writeRow(result);
@@ -156,6 +159,7 @@ function createCSVStream(filePath: string): {
     "isActive",
     "contentType",
     "isArweaveManifest",
+    "isPrimaryName",
   ];
 
   const stream = fs.createWriteStream(filePath, { flags: "w" });
@@ -177,6 +181,7 @@ function createCSVStream(filePath: string): {
 function generateSummary(tally: SummaryTally) {
   return {
     totalRegisteredNames: tally.totalRegisteredNames,
+    totalPrimaryNames: tally.totalPrimaryNames,
     totalRecords: tally.totalRecords,
     totalArNSNames: tally.arns.size,
     manifestsFound: tally.manifestsFound,
@@ -203,6 +208,7 @@ async function main() {
 
   const tally: SummaryTally = {
     totalRegisteredNames: 0,
+    totalPrimaryNames: 0,
     totalRecords: 0,
     activeRecords: 0,
     inactiveRecords: 0,
@@ -214,33 +220,47 @@ async function main() {
     contentTypes: {},
   };
 
+  console.log("[INFO] Fetching primary names...");
+  const primaryNames = await fetchPrimaryNames();
+  tally.totalPrimaryNames = primaryNames.size;
+  console.log(`[INFO] Found ${tally.totalPrimaryNames} primary names.`);
+
   const records = await fetchArNSRecords();
+  tally.totalRegisteredNames = records.length;
+
   const limit = pLimit(CONCURRENCY);
   let processed = 0;
 
-  for (const record of records) {
-    await limit(() =>
-      analyzeRecord(record.name, record.processId, writeRow, tally)
-    );
-    processed++;
-    if (processed % 25 === 0) {
-      console.log(`[🔄] Processed ${processed}/${records.length}`);
-    }
-  }
+  // Create an array of thunks (functions that return promises)
+  const tasks = records.map((record) =>
+    limit(async () => {
+      await analyzeRecord(
+        record.name,
+        record.processId,
+        writeRow,
+        tally,
+        primaryNames
+      );
+      processed++;
+      if (processed % 25 === 0) {
+        console.log(`[🔄] Processed ${processed}/${records.length}`);
+      }
+    })
+  );
 
-  close(); // Ensure final CSV flush
+  // Await all tasks concurrently with the concurrency limit
+  await Promise.allSettled(tasks);
+
+  close();
 
   const summary = generateSummary(tally);
-  summary.totalRegisteredNames = records.length;
   const summaryPath = path.join(outputDir, "summary.json");
   fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
 
   console.log("\n📊 Summary:");
   const { contentTypeBreakdown, ...mainSummary } = summary;
-
   console.table(mainSummary);
 
-  // Pretty print the content types
   console.log("\n📦 Content Type Breakdown:");
   const sortedContentTypes = Object.entries(contentTypeBreakdown).sort(
     ([, a], [, b]) => b - a
@@ -248,6 +268,7 @@ async function main() {
   sortedContentTypes.forEach(([type, count]) => {
     console.log(`- ${type}: ${count}`);
   });
+
   console.log(`📁 Summary saved to: ${summaryPath}`);
   console.log(`📂 Output directory: ${outputDir}`);
 }
