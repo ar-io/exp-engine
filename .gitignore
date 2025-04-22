@@ -47,3 +47,5 @@ exp-key.json
 
 /data/*
 *.csv
+
+.yarn/
